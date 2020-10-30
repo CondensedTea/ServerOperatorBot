@@ -22,12 +22,10 @@ logging.basicConfig(filename="ServerOperator.log", filemode="a", format="%(ascti
 client = Client(token=os.environ["TOKEN_HCLOUD"])
 admin_filter = Filters.user()
 admin_filter.add_user_ids(admins_list)
+user_filter = Filters.user()
 
 
 def start(update, context):
-    user_list = []
-    user_filter = Filters.user()
-    user_filter.add_user_ids(user_list)
     data = load_json(data_file)
     invites = load_json(invites_file)
     join_token = extract_join_token(context.args)
@@ -37,6 +35,7 @@ def start(update, context):
         if f'{user_id}' not in data.keys():
             if invites[f'{join_token}'] == "":
                 data[f'{user_id}'] = {"name": name, "server_ip": "", "server_id": ""}
+                user_filter.add_user_ids(user_id)
                 invites[f'{join_token}'] = user_id
                 flush_json(data_file, data)
                 flush_json(invites_file, invites)
@@ -151,9 +150,6 @@ def get_name(update):
 
 
 def main():
-    user_list = []
-    user_filter = Filters.user()
-    user_filter.add_user_ids(user_list)
     updater = Updater(token=os.environ["TOKEN_SO"], use_context=True)
 
     dp = updater.dispatcher
@@ -166,4 +162,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-    logging.info("✅ Bot was started  ")
+    logging.info("✅ Bot has started")
