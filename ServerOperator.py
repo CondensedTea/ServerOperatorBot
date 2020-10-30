@@ -17,11 +17,11 @@ admins_list = [458654293]
 data_file = "data.json"
 invites_file = "invites.json"
 text_file = "text.py"
+log_file = "bot.log"
 
-logging.basicConfig(filename="ServerOperator.log", filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 client = Client(token=os.environ["TOKEN_HCLOUD"])
 admin_filter = Filters.user()
-admin_filter.add_user_ids(admins_list)
 user_filter = Filters.user()
 
 
@@ -149,7 +149,18 @@ def get_name(update):
     return f'{update.message.chat.first_name}{"" if update.message.chat.last_name is None else " "+update.message.chat.last_name}'
 
 
+def get_user_ids(file):
+    user_list = []
+    data = load_json(file)
+    for user in data.keys():
+        user_list.append(int(user))
+    return user_list
+
+
 def main():
+    user_filter.add_user_ids(get_user_ids(data_file))
+    admin_filter.add_user_ids(admins_list)
+
     updater = Updater(token=os.environ["TOKEN_SO"], use_context=True)
 
     dp = updater.dispatcher
@@ -162,4 +173,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    logging.info("✅ Bot has started")
