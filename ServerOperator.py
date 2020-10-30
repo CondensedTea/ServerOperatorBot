@@ -104,7 +104,7 @@ def close_server(update, context):
         client.servers.delete(
             server=Server(id=int(server_id))
         )
-        os.system(f'samba-tool computer delete "Cloud-PC-{ip}"')
+        os.system(f'/usr/local/samba/bin/samba-tool computer delete "Cloud-PC-{ip}"')
         data[f'{user_id}']["server_ip"] = ""
         data[f'{user_id}']["server_id"] = ""
         flush_json(data_file, data)
