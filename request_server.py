@@ -2,13 +2,19 @@ from flask import Flask, request
 from ServerOperator import load_json, data_file
 import os
 import telegram
+import logging
+
+# Config
+log_file = "flask.log"
 
 app = Flask(__name__)
 bot = telegram.Bot(token=os.environ["TOKEN_SO"])
+logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 
 @app.route('/get_name')
 def get_name():
+    logging.info("get_name was called from {}".format(request.remote_addr))
     name_resolve = {}
     data = load_json(data_file)
     for telegram_id in data:
@@ -18,6 +24,7 @@ def get_name():
 
 @app.route('/user/<name>')
 def is_ready(name):
+    logging.info("{} is up and running".format(name))
     id_resolve = {}
     data = load_json(data_file)
     for telegram_id in data:
