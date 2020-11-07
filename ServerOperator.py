@@ -31,7 +31,7 @@ def start(update, context):
     invites = load_json(invites_file)
     join_token = extract_join_token(context.args)
     user_id = update.message.from_user.id
-    name = re.search(r'\+(.*)')
+    name = re.search(r'\+(.*)', 'unknown')
     if join_token in invites.keys():
         if f'{user_id}' not in data.keys():
             if invites[str(join_token)] == "":
@@ -64,17 +64,23 @@ def gen_link(update, context):
 
 
 def open_server(update, context):
-    user_id = update.message.from_user.id
     data = load_json(data_file)
-    name = get_name(update)
+    if len(context.args) == 0:
+        user_id = update.message.from_user.id
+        name = get_name(update)
+    else:
+        for tg_id in data:
+            if data[str(tg_id)]["name"] == context.args[0]:
+                user_id = tg_id
+                name = data[str(tg_id)]["name"]
     try:
+        t = Text(name)
         if data[str(user_id)]["server_ip"] == "":
-            ip = get_ip_address(data, user_id)
-            t = Text(ip)
+            ip = get_ip_address(data)
             create_response = client.servers.create(
                 name='Cloud-PC-{}'.format(data[str(user_id)]["name"]),
                 server_type=ServerType(name="cpx31"),
-                image=Image(id=25093007),
+                image=Image(id=25660860),
                 networks=[Network(id=135205)],
                 location=Location(id=2)
             )
@@ -82,10 +88,9 @@ def open_server(update, context):
             data[str(user_id)]["server_id"] = create_response.server.id
             flush_json(data_file, data)
             context.bot.send_message(chat_id=update.effective_chat.id, text=t.creation_complete())
-            logging.info(f'⬆️ {name}({user_id}) created server Cloud-PC-{ip}')
+            logging.info(f'⬆️ {name}({user_id}) created server Cloud-PC-{name}')
         else:
             ip = data[str(user_id)]["server_ip"]
-            t = Text(ip)
             context.bot.send_message(chat_id=update.effective_chat.id, text=t.user_have_server())
             logging.warning(f'⚠️ {name}({user_id}) tried create second server')
             return
@@ -95,31 +100,36 @@ def open_server(update, context):
 
 
 def close_server(update, context):
-    user_id = update.message.from_user.id
-    name = get_name(update)
     data = load_json(data_file)
-    server = data[str(user_id)]["name"]
+    if len(context.args) == 0:
+        user_id = update.message.from_user.id
+        name = get_name(update)
+    else:
+        for tg_id in data:
+            if data[str(tg_id)]["name"] == context.args[0]:
+                user_id = tg_id
+                name = data[str(tg_id)]["name"]
     ip = data[str(user_id)]["server_ip"]
-    t = Text(ip)
+    t = Text(name)
     server_id = data[str(user_id)]["server_id"]
     try:
         client.servers.delete(
             server=Server(id=int(server_id))
         )
-        os.system(f'/usr/local/samba/bin/samba-tool computer delete "{server}"')
+        os.system(f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-"{name}"')
         data[str(user_id)]["server_ip"] = ""
         data[str(user_id)]["server_id"] = ""
         flush_json(data_file, data)
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete())
-        logging.info(f'⬇️ {name}({user_id}) deleted server {server}')
+        logging.info(f'⬇️ {name}({user_id}) deleted server cloud-pc-{ip}')
     except:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error())
-        logging.error(f'❌ {name}({user_id}) could not delete server {server}')
+        logging.error(f'❌ {name}({user_id}) could not delete server {ip}')
 
 
-def gen_join_token(name):
+def gen_join_token(user):
     letters = string.ascii_letters+string.digits
-    result_str = ''.join(random.choice(letters) for i in range(24))+"+"+name
+    result_str = ''.join(random.choice(letters) for i in range(24))+"+"+user
     return result_str
 
 
@@ -127,7 +137,7 @@ def extract_join_token(args):
     return args[0] if len(args) == 1 else None
 
 
-def get_ip_address(data, user_id):
+def get_ip_address(data):
     ip_pool = []
     for token in data:
         if data[str(token)]["server_ip"] != "":
