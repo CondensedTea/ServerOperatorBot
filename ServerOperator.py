@@ -67,12 +67,11 @@ def open_server(update, context):
     data = load_json(data_file)
     if len(context.args) == 0:
         user_id = update.message.from_user.id
-        name = get_name(update)
     else:
         for tg_id in data:
             if data[str(tg_id)]["name"] == context.args[0]:
                 user_id = tg_id
-                name = data[str(tg_id)]["name"]
+    name = data[str(user_id)]["name"]
     try:
         t = Text(name)
         if data[str(user_id)]["server_ip"] == "":
@@ -103,12 +102,11 @@ def close_server(update, context):
     data = load_json(data_file)
     if len(context.args) == 0:
         user_id = update.message.from_user.id
-        name = get_name(update)
     else:
         for tg_id in data:
             if data[str(tg_id)]["name"] == context.args[0]:
                 user_id = tg_id
-                name = data[str(tg_id)]["name"]
+    name = data[str(user_id)]["name"]
     ip = data[str(user_id)]["server_ip"]
     t = Text(name)
     server_id = data[str(user_id)]["server_id"]
