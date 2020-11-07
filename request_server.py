@@ -5,7 +5,6 @@ import telegram
 
 app = Flask(__name__)
 bot = telegram.Bot(token=os.environ["TOKEN_SO"])
-hcloud_network = "192.168.89."
 
 
 @app.route('/get_name')
@@ -13,7 +12,7 @@ def get_name():
     name_resolve = {}
     data = load_json(data_file)
     for telegram_id in data:
-        name_resolve['{}{}'.format(hcloud_network, data[telegram_id]["server_ip"])] = data[telegram_id]["name"]
+        name_resolve['192.168.89.{}'.format(data[telegram_id]["server_ip"])] = data[telegram_id]["name"]
     return name_resolve[str(request.remote_addr)]
 
 
