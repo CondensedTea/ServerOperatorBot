@@ -67,10 +67,12 @@ def open_server(update, context):
     data = load_json(data_file)
     if len(context.args) == 0:
         user_id = update.message.from_user.id
-    else:
+    elif update.message.from_user.id in admins_list:
         for tg_id in data:
             if data[str(tg_id)]["name"] == context.args[0]:
                 user_id = tg_id
+    else:
+        return
     name = data[str(user_id)]["name"]
     try:
         t = Text(name)
@@ -102,10 +104,12 @@ def close_server(update, context):
     data = load_json(data_file)
     if len(context.args) == 0:
         user_id = update.message.from_user.id
-    else:
+    elif update.message.from_user.id in admins_list:
         for tg_id in data:
             if data[str(tg_id)]["name"] == context.args[0]:
                 user_id = tg_id
+    else:
+        return
     name = data[str(user_id)]["name"]
     ip = data[str(user_id)]["server_ip"]
     t = Text(name)
@@ -114,12 +118,12 @@ def close_server(update, context):
         client.servers.delete(
             server=Server(id=int(server_id))
         )
-        os.system(f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-"{name}"')
+        os.system(f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-{name}')
         data[str(user_id)]["server_ip"] = ""
         data[str(user_id)]["server_id"] = ""
         flush_json(data_file, data)
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete())
-        logging.info(f'⬇️ {name}({user_id}) deleted server cloud-pc-{ip}')
+        logging.info(f'⬇️ {name}({user_id}) deleted server {ip}')
     except:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error())
         logging.error(f'❌ {name}({user_id}) could not delete server {ip}')
