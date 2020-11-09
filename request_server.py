@@ -4,12 +4,11 @@ import os
 import telegram
 import logging
 
-# Config
-log_file = "flask.log"
 
 app = Flask(__name__)
 bot = telegram.Bot(token=os.environ["TOKEN_SO"])
-logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 
 @app.route('/get_name')

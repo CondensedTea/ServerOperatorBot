@@ -21,6 +21,7 @@ text_file = "text.py"
 log_file = "bot.log"
 
 logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+
 client = Client(token=os.environ["TOKEN_HCLOUD"])
 admin_filter = Filters.user()
 user_filter = Filters.user()
@@ -31,7 +32,7 @@ def start(update, context):
     invites = load_json(invites_file)
     join_token = extract_join_token(context.args)
     user_id = update.message.from_user.id
-    name = re.search(r'\+(.*)', 'unknown')
+    name = re.search(r'--(.*)', 'unknown')
     if join_token in invites.keys():
         if f'{user_id}' not in data.keys():
             if invites[str(join_token)] == "":
@@ -79,7 +80,7 @@ def open_server(update, context):
         if data[str(user_id)]["server_ip"] == "":
             ip = get_ip_address(data)
             create_response = client.servers.create(
-                name='Cloud-PC-{}'.format(data[str(user_id)]["name"]),
+                name='cloud-pc-{}'.format(data[str(user_id)]["name"]),
                 server_type=ServerType(name="cpx31"),
                 image=Image(id=25660860),
                 networks=[Network(id=135205)],
@@ -87,6 +88,7 @@ def open_server(update, context):
             )
             data[str(user_id)]["server_ip"] = ip
             data[str(user_id)]["server_id"] = create_response.server.id
+            os.system(f'/usr/local/samba/bin/samba-tool dns add wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {os.environ["robot"]}')
             flush_json(data_file, data)
             context.bot.send_message(chat_id=update.effective_chat.id, text=t.creation_complete())
             logging.info(f'⬆️ {name}({user_id}) created server Cloud-PC-{name}')
@@ -115,9 +117,9 @@ def close_server(update, context):
     t = Text(name)
     server_id = data[str(user_id)]["server_id"]
     try:
-        client.servers.delete(
-            server=Server(id=int(server_id))
-        )
+        client.servers.shutdown(server=Server(id=int(server_id)))
+        client.servers.delete(server=Server(id=int(server_id)))
+        os.system(f'/usr/local/samba/bin/samba-tool dns delete wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {os.environ["robot"]}')
         os.system(f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-{name}')
         data[str(user_id)]["server_ip"] = ""
         data[str(user_id)]["server_id"] = ""
@@ -131,7 +133,7 @@ def close_server(update, context):
 
 def gen_join_token(user):
     letters = string.ascii_letters+string.digits
-    result_str = ''.join(random.choice(letters) for i in range(24))+"+"+user
+    result_str = ''.join(random.choice(letters) for i in range(24))+"--"+user
     return result_str
 
 
