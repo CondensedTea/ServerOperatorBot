@@ -21,6 +21,8 @@ text_file = "text.py"
 log_file = "bot.log"
 
 logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logger = logging.getLogger("apscheduler.scheduler")
+logger.setLevel(logging.WARNING)
 
 client = Client(token=os.environ["TOKEN_HCLOUD"])
 admin_filter = Filters.user()
