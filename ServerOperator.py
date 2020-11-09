@@ -19,6 +19,7 @@ data_file = "data.json"
 invites_file = "invites.json"
 text_file = "text.py"
 log_file = "bot.log"
+admin_password = os.environ["ROBOT"]
 
 logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger("apscheduler.scheduler")
@@ -90,7 +91,7 @@ def open_server(update, context):
             )
             data[str(user_id)]["server_ip"] = ip
             data[str(user_id)]["server_id"] = create_response.server.id
-            os.system(f'/usr/local/samba/bin/samba-tool dns add wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {os.environ["robot"]}')
+            os.system(f'/usr/local/samba/bin/samba-tool dns add wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {admin_password}')
             flush_json(data_file, data)
             context.bot.send_message(chat_id=update.effective_chat.id, text=t.creation_complete())
             logging.info(f'⬆️ {name}({user_id}) created server Cloud-PC-{name}')
