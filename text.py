@@ -8,7 +8,7 @@ class Text:
         self.n = name
 
     def creation_complete(self):
-        return 'Ваша заявка успешно принята, сервер cloud-pc-{}.hq.rtdprk.ru будет доступен через несколько минут'.format(self.n)
+        return 'Ваша заявка успешно принята, сервер cloud-pc-{}.hq.rtdprk.ru будет доступен через 10 минут'.format(self.n)
 
     def user_have_server(self):
         return 'Вы уже создали сервер cloud-pc-{}, что бы открыть новый сервер, необходимо его закрыть командой /close'.format(self.n)
@@ -17,4 +17,4 @@ class Text:
         return 'Вы успешно закрыли сервер cloud-pc-{}'.format(self.n)
 
     def deletion_error(self):
-        return 'Не удалось закрыть сервер Cloud-PC-{}, обратитесь в поддержку helpdesk@rtdprk.ru'.format(self.n)
+        return 'Не удалось закрыть сервер сloud-pc-{}, обратитесь в поддержку helpdesk@rtdprk.ru'.format(self.n)

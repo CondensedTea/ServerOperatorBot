@@ -35,7 +35,7 @@ def start(update, context):
     invites = load_json(invites_file)
     join_token = extract_join_token(context.args)
     user_id = update.message.from_user.id
-    name = re.search(r'--(.*)', 'unknown')
+    name = re.search(r'--(.*)')
     if join_token in invites.keys():
         if f'{user_id}' not in data.keys():
             if invites[str(join_token)] == "":
@@ -120,7 +120,6 @@ def close_server(update, context):
     t = Text(name)
     server_id = data[str(user_id)]["server_id"]
     try:
-        client.servers.shutdown(server=Server(id=int(server_id)))
         client.servers.delete(server=Server(id=int(server_id)))
         os.system(f'/usr/local/samba/bin/samba-tool dns delete wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {os.environ["robot"]}')
         os.system(f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-{name}')
@@ -134,7 +133,7 @@ def close_server(update, context):
         logging.error(f'❌ {name}({user_id}) could not delete server {ip}')
 
 
-def gen_join_token(user):
+def gen_join_token(user="unknown"):
     letters = string.ascii_letters+string.digits
     result_str = ''.join(random.choice(letters) for i in range(24))+"--"+user
     return result_str
