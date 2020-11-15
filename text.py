@@ -1,20 +1,9 @@
 class Text:
-    welcome = "Добро пожаловать, вы были успешно зарегистрированны в системе"
+    welcome = "Добро пожаловать, Вы были успешно зарегистрированны в системе удаленных рабочих мест"
     broken_link = "Эта ссылка больше не работает, обратитесь к администратору за новой ссылкой для регистрации"
     user_in_base = "Вы уже зарегестрированы в системе"
-    open_server_error = "Сейчас невозможно создать сервер, обратитесь в поддержку helpdesk@rtdprk.ru"
-
-    def __init__(self, name=None):
-        self.n = name
-
-    def creation_complete(self):
-        return 'Ваша заявка успешно принята, сервер cloud-pc-{}.hq.rtdprk.ru будет доступен через 10 минут'.format(self.n)
-
-    def user_have_server(self):
-        return 'Вы уже создали сервер cloud-pc-{}, что бы открыть новый сервер, необходимо его закрыть командой /close'.format(self.n)
-
-    def deletion_complete(self):
-        return 'Вы успешно закрыли сервер cloud-pc-{}'.format(self.n)
-
-    def deletion_error(self):
-        return 'Не удалось закрыть сервер сloud-pc-{}, обратитесь в поддержку helpdesk@rtdprk.ru'.format(self.n)
+    open_server_error = "Не удалось создать ваше рабочее место, обратитесь в a.b.tyshkevich@rtdprk.ru"
+    creation_complete = "Заявка успешно принята, ваше рабочее место будет доступен через 10 минут"
+    user_have_server = "Вы уже имеете удаленное рабочее место. Чтобы открыть новое место, необходимо закрыть старое командой /close"
+    deletion_complete = "Рабочее место успешно выключено"
+    deletion_error = "Не удалось выключить Ваше рабочее место, обратитесь в поддержку a.b.tyshkevich@rtdprk.ru"
