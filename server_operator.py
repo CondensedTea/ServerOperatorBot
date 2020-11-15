@@ -96,10 +96,10 @@ def open_server(update, context):
             data[str(user_id)]["server_id"] = create_response.server.id
             os.system(f'/usr/local/samba/bin/samba-tool dns add wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {admin_password}')
             flush_json(data_file, data)
-            context.bot.send_message(chat_id=update.effective_chat.id, text=t.creation_complete())
+            context.bot.send_message(chat_id=update.effective_chat.id, text=t.creation_complete)
             logging.info(f'⬆️  {name}({user_id}) created server Cloud-PC-{name}')
         else:
-            context.bot.send_message(chat_id=update.effective_chat.id, text=t.user_have_server())
+            context.bot.send_message(chat_id=update.effective_chat.id, text=t.user_have_server)
             logging.warning(f'⚠️  {name}({user_id}) tried create second server')
             return
     except:
@@ -129,10 +129,10 @@ def close_server(update, context):
         data[str(user_id)]["server_ip"] = ""
         data[str(user_id)]["server_id"] = ""
         flush_json(data_file, data)
-        context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete())
+        context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete)
         logging.info(f'⬇️  {name}({user_id}) deleted server {ip}')
     except:
-        context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error())
+        context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error)
         logging.error(f'❌  {name}({user_id}) could not delete server {ip}')
 
 
