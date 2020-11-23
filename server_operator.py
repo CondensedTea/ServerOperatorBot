@@ -152,7 +152,7 @@ def get_ip_address(data):
     for token in data:
         if data[str(token)]["server_ip"] != "":
             ip_pool.append(int(data[token]["server_ip"]))
-    for ip in range(4, 255):
+    for ip in range(5, 255):
         if ip not in ip_pool:
             return ip
 
