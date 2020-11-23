@@ -11,6 +11,7 @@ from hcloud.images.domain import Image
 from hcloud.servers.domain import Server
 from hcloud.server_types.domain import ServerType
 from hcloud.locations.domain import Location
+from hcloud.ssh_keys.domain import SSHKey
 from hcloud.networks.domain import Network
 
 # Config
@@ -88,6 +89,7 @@ def open_server(update, context):
                 name='cloud-pc-{}'.format(data[str(user_id)]["name"]),
                 server_type=ServerType(name="cpx31"),
                 image=Image(id=25660860),
+                ssh_keys=[SSHKey(id=1884416)],
                 networks=[Network(id=135205)],
                 location=Location(id=2)
             )
@@ -119,8 +121,8 @@ def close_server(update, context):
     name = data[str(user_id)]["name"]
     ip = data[str(user_id)]["server_ip"]
     server_id = data[str(user_id)]["server_id"]
+    creation_timestamp = data[str(user_id)]["timestamp"]
     try:
-        deletion_start = context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_started)
         response = client.servers.shutdown(server=Server(id=int(server_id)))
         response.wait_until_finished()
         client.servers.delete(server=Server(id=int(server_id)))
@@ -128,9 +130,9 @@ def close_server(update, context):
         os.system(f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-{name}')
         data[str(user_id)]["server_ip"] = ""
         data[str(user_id)]["server_id"] = ""
+        data[str(user_id)]["timestamp"] = ""
         flush_json(data_file, data)
-        context.bot.edit_message_text(chat_id=deletion_start, text=t.deletion_complete)
-        #context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete)
+        context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete)
         logging.info(f'⬇️ {name}({user_id}) deleted server {ip}')
     except:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error)
