@@ -62,13 +62,12 @@ def gen_link(update, context):
         context.bot.send_message(chat_id=update.effective_chat.id, text="Для создания приглашения необходимо указать имя, /gen_link <имя>")
     else:
         user_id = update.message.from_user.id
-        name = get_name(update)
         invites = load_json(invites_file)
         current_join_token = gen_join_token(context.args[0])
         invites[str(current_join_token)] = ""
         flush_json(invites_file, invites)
         context.bot.send_message(chat_id=update.effective_chat.id, text=f'https://t.me/ServerOperatorBot?start={current_join_token}')
-        logging.info(f'🔗 Invite link was made by {name}({user_id}) for {context.args[0]}')
+        logging.info(f'🔗 Invite link was made by ({user_id}) for {context.args[0]}')
 
 
 def open_server(update, context):
@@ -97,14 +96,14 @@ def open_server(update, context):
             os.system(f'/usr/local/samba/bin/samba-tool dns add wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {admin_password}')
             flush_json(data_file, data)
             context.bot.send_message(chat_id=update.effective_chat.id, text=t.creation_complete)
-            logging.info(f'⬆️  {name}({user_id}) created server Cloud-PC-{name}')
+            logging.info(f'⬆️ {name}({user_id}) created server Cloud-PC-{name}')
         else:
             context.bot.send_message(chat_id=update.effective_chat.id, text=t.user_have_server)
-            logging.warning(f'⚠️  {name}({user_id}) tried create second server')
+            logging.warning(f'⚠️ {name}({user_id}) tried create second server')
             return
     except:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.open_server_error)
-        logging.error(f'❌  {name}({user_id}) could not create server')
+        logging.error(f'❌ {name}({user_id}) could not create server')
 
 
 def close_server(update, context):
@@ -121,19 +120,21 @@ def close_server(update, context):
     ip = data[str(user_id)]["server_ip"]
     server_id = data[str(user_id)]["server_id"]
     try:
+        deletion_start = context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_started)
         response = client.servers.shutdown(server=Server(id=int(server_id)))
         response.wait_until_finished()
         client.servers.delete(server=Server(id=int(server_id)))
-        os.system(f'/usr/local/samba/bin/samba-tool dns delete wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {os.environ["robot"]}')
+        os.system(f'/usr/local/samba/bin/samba-tool dns delete wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {admin_password}')
         os.system(f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-{name}')
         data[str(user_id)]["server_ip"] = ""
         data[str(user_id)]["server_id"] = ""
         flush_json(data_file, data)
-        context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete)
-        logging.info(f'⬇️  {name}({user_id}) deleted server {ip}')
+        context.bot.edit_message_text(chat_id=deletion_start, text=t.deletion_complete)
+        #context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete)
+        logging.info(f'⬇️ {name}({user_id}) deleted server {ip}')
     except:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error)
-        logging.error(f'❌  {name}({user_id}) could not delete server {ip}')
+        logging.error(f'❌ {name}({user_id}) could not delete server {ip}')
 
 
 def gen_join_token(user="unknown"):
@@ -164,10 +165,6 @@ def load_json(json_file):
 def flush_json(json_file, data):
     with open(json_file, "w") as file:
         json.dump(data, file, indent=4)
-
-
-def get_name(update):
-    return f'{update.message.chat.first_name}{"" if update.message.chat.last_name is None else " "+update.message.chat.last_name}'
 
 
 def get_user_ids(file):

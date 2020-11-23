@@ -13,7 +13,7 @@ log.setLevel(logging.ERROR)
 
 @app.route('/get_name')
 def get_name():
-    logging.info("🧪  get_name was called from {}".format(request.remote_addr))
+    logging.info("🧪 get_name was called from {}".format(request.remote_addr))
     name_resolve = {}
     data = load_json(data_file)
     for telegram_id in data:
@@ -23,7 +23,7 @@ def get_name():
 
 @app.route('/user/<name>')
 def is_ready(name):
-    logging.info("🧪  {}'s server is up and running".format(name))
+    logging.info("🧪 {}'s server is up and running".format(name))
     id_resolve = {}
     data = load_json(data_file)
     for telegram_id in data:
