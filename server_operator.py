@@ -27,7 +27,7 @@ logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(nam
 logger = logging.getLogger("apscheduler.scheduler")
 logger.setLevel(logging.WARNING)
 
-client = Client(token=os.environ["TOKEN_HCLOUD"])
+client = Client(token=os.environ["TOKEN_HCLOUD"], poll_interval=5)
 admin_filter = Filters.user()
 user_filter = Filters.user()
 
@@ -37,11 +37,11 @@ def start(update, context):
     invites = load_json(invites_file)
     join_token = extract_join_token(context.args)
     user_id = update.message.from_user.id
-    name = re.search(r'--(.*)')
+    name = re.search(r'--(.*)', join_token)
     if join_token in invites.keys():
         if f'{user_id}' not in data.keys():
             if invites[str(join_token)] == "":
-                data[str(user_id)] = {"name": name, "server_ip": "", "server_id": ""}
+                data[str(user_id)] = {"name": name, "server_ip": "", "server_id": "", "snapshot_id": ""}
                 user_filter.add_user_ids(user_id)
                 invites[str(join_token)] = user_id
                 flush_json(data_file, data)
@@ -82,13 +82,17 @@ def open_server(update, context):
     else:
         return
     name = data[str(user_id)]["name"]
+    if data[str(user_id)]["snapshot_id"] == "":
+        snapshot = 25660860
+    else:
+        snapshot = data[str(user_id)]["snapshot_id"]
     try:
         if data[str(user_id)]["server_ip"] == "":
             ip = get_ip_address(data)
             create_response = client.servers.create(
                 name='cloud-pc-{}'.format(data[str(user_id)]["name"]),
                 server_type=ServerType(name="cpx31"),
-                image=Image(id=25660860),
+                image=Image(id=snapshot),
                 ssh_keys=[SSHKey(id=1884416)],
                 networks=[Network(id=135205)],
                 location=Location(id=2)
@@ -98,14 +102,13 @@ def open_server(update, context):
             os.system(f'/usr/local/samba/bin/samba-tool dns add wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {admin_password}')
             flush_json(data_file, data)
             context.bot.send_message(chat_id=update.effective_chat.id, text=t.creation_complete)
-            logging.info(f'⬆️ {name}({user_id}) created server Cloud-PC-{name}')
+            logging.info(f'⬆️ {name}({user_id}) created server on {ip}')
         else:
             context.bot.send_message(chat_id=update.effective_chat.id, text=t.user_have_server)
-            logging.warning(f'⚠️ {name}({user_id}) tried create second server')
-            return
-    except:
+            logging.warning(f'⚠️ {name}({user_id}) tried to create second server')
+    except Exception as err:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.open_server_error)
-        logging.error(f'❌ {name}({user_id}) could not create server')
+        logging.error(f'❌ {name}({user_id}) could not create server, {err}')
 
 
 def close_server(update, context):
@@ -121,22 +124,23 @@ def close_server(update, context):
     name = data[str(user_id)]["name"]
     ip = data[str(user_id)]["server_ip"]
     server_id = data[str(user_id)]["server_id"]
-    creation_timestamp = data[str(user_id)]["timestamp"]
     try:
-        response = client.servers.shutdown(server=Server(id=int(server_id)))
-        response.wait_until_finished()
+        response_create_snapshot = client.servers.create_image(server=Server(id=int(server_id)), description="for user {}".format(name))
+        response_create_snapshot.wait_until_finished(max_retries=180)
+        response_shutdown = client.servers.shutdown(server=Server(id=int(server_id)))
+        response_shutdown.wait_until_finished(max_retries=180)
         client.servers.delete(server=Server(id=int(server_id)))
         os.system(f'/usr/local/samba/bin/samba-tool dns delete wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {admin_password}')
         os.system(f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-{name}')
         data[str(user_id)]["server_ip"] = ""
         data[str(user_id)]["server_id"] = ""
-        data[str(user_id)]["timestamp"] = ""
+        data[str(user_id)]["snapshot_id"] = response_create_snapshot.id
         flush_json(data_file, data)
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete)
-        logging.info(f'⬇️ {name}({user_id}) deleted server {ip}')
-    except:
+        logging.info(f'⬇️ {name}({user_id}) deleted server on {ip}')
+    except Exception as err:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error)
-        logging.error(f'❌ {name}({user_id}) could not delete server {ip}')
+        logging.error(f'❌ {name}({user_id}) could not delete server on {ip}, {err}')
 
 
 def gen_join_token(user="unknown"):
@@ -190,6 +194,7 @@ def main():
     dp.add_handler(CommandHandler("close", close_server, user_filter))
 
     updater.start_polling()
+
 
 if __name__ == '__main__':
     main()
