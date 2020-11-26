@@ -32,5 +32,6 @@ def is_ready(name):
     bot.send_message(chat_id=id_resolve[name], text="Удаленное рабочее место готово к работе")
     return '', 202
 
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0')

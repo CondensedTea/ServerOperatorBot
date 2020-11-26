@@ -125,8 +125,9 @@ def close_server(update, context):
     ip = data[str(user_id)]["server_ip"]
     server_id = data[str(user_id)]["server_id"]
     try:
-        response_create_snapshot = client.servers.create_image(server=Server(id=int(server_id)), description="for user {}".format(name))
-        response_create_snapshot.wait_until_finished(max_retries=180)
+        msg = context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_started)
+        response_create_snapshot = client.servers.create_image(server=Server(id=int(server_id)), description="cloud-pc-{}".format(name))
+        response_create_snapshot.action.wait_until_finished(max_retries=1000)
         response_shutdown = client.servers.shutdown(server=Server(id=int(server_id)))
         response_shutdown.wait_until_finished(max_retries=180)
         client.servers.delete(server=Server(id=int(server_id)))
@@ -136,7 +137,7 @@ def close_server(update, context):
         data[str(user_id)]["server_id"] = ""
         data[str(user_id)]["snapshot_id"] = response_create_snapshot.id
         flush_json(data_file, data)
-        context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete)
+        context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=msg.message_id, text=t.deletion_complete)
         logging.info(f'⬇️ {name}({user_id}) deleted server on {ip}')
     except Exception as err:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error)
@@ -158,7 +159,7 @@ def get_ip_address(data):
     for token in data:
         if data[str(token)]["server_ip"] != "":
             ip_pool.append(int(data[token]["server_ip"]))
-    for ip in range(5, 255):
+    for ip in range(6, 255):
         if ip not in ip_pool:
             return ip
 
