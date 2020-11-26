@@ -27,7 +27,7 @@ logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(nam
 logger = logging.getLogger("apscheduler.scheduler")
 logger.setLevel(logging.WARNING)
 
-client = Client(token=os.environ["TOKEN_HCLOUD"], poll_interval=5)
+client = Client(token=os.environ["TOKEN_HCLOUD"])
 admin_filter = Filters.user()
 user_filter = Filters.user()
 
@@ -127,9 +127,9 @@ def close_server(update, context):
     try:
         msg = context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_started)
         response_create_snapshot = client.servers.create_image(server=Server(id=int(server_id)), description="cloud-pc-{}".format(name))
-        response_create_snapshot.action.wait_until_finished(max_retries=1000)
+        response_create_snapshot.action.wait_until_finished(max_retries=900)
         response_shutdown = client.servers.shutdown(server=Server(id=int(server_id)))
-        response_shutdown.wait_until_finished(max_retries=180)
+        response_shutdown.wait_until_finished(max_retries=900)
         client.servers.delete(server=Server(id=int(server_id)))
         os.system(f'/usr/local/samba/bin/samba-tool dns delete wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {admin_password}')
         os.system(f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-{name}')
@@ -144,7 +144,7 @@ def close_server(update, context):
         logging.error(f'❌ {name}({user_id}) could not delete server on {ip}, {err}')
 
 
-def gen_join_token(user="unknown"):
+def gen_join_token(user):
     letters = string.ascii_letters+string.digits
     result_str = ''.join(random.choice(letters) for i in range(24))+"--"+user
     return result_str
