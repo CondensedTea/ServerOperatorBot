@@ -5,7 +5,9 @@ import string
 import logging
 import json
 import re
+import time
 from text import Text
+import systemd
 from hcloud import Client
 from hcloud.images.domain import Image
 from hcloud.servers.domain import Server
@@ -13,6 +15,9 @@ from hcloud.server_types.domain import ServerType
 from hcloud.locations.domain import Location
 from hcloud.ssh_keys.domain import SSHKey
 from hcloud.networks.domain import Network
+
+import subprocess
+import shlex
 
 # Config
 admins_list = [458654293]
@@ -24,12 +29,33 @@ admin_password = os.environ["ROBOT"]
 t = Text
 
 logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-logger = logging.getLogger("apscheduler.scheduler")
+logger = logging.getLogger("ServerOperatorBot")
 logger.setLevel(logging.WARNING)
 
-client = Client(token=os.environ["TOKEN_HCLOUD"])
+client = Client(token=os.environ["TOKEN_HCLOUD"], poll_interval=30)
 admin_filter = Filters.user()
 user_filter = Filters.user()
+
+
+def samba_tool(command, name, ip=""):
+    if command == "computer delete":
+        command_line = f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-{name}'
+    else:
+        command_line = f'/usr/local/samba/bin/samba-tool dns {command} wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {admin_password}'
+
+    command_line_args = shlex.split(command_line)
+    logging.warning('Subprocess: ' + command_line_args[0])
+
+    try:
+        command_line_process = subprocess.Popen(command_line_args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,)
+        (out, err) = command_line_process.communicate()
+        logging.info("samba-tool: "+str(out)+" "+str(err))
+    except (OSError, CalledProcessError) as exception:
+        logging.warning('Exception occurred: ' + str(exception))
+        logging.warning('Subprocess failed')
+        return False
+    else:
+        logging.warning('Subprocess finished')
 
 
 def start(update, context):
@@ -37,11 +63,11 @@ def start(update, context):
     invites = load_json(invites_file)
     join_token = extract_join_token(context.args)
     user_id = update.message.from_user.id
-    name = re.search(r'--(.*)')
+    name = re.search(r'--(.*)', join_token)
     if join_token in invites.keys():
         if f'{user_id}' not in data.keys():
             if invites[str(join_token)] == "":
-                data[str(user_id)] = {"name": name, "server_ip": "", "server_id": ""}
+                data[str(user_id)] = {"name": name, "server_ip": "", "server_id": "", "snapshot_id": ""}
                 user_filter.add_user_ids(user_id)
                 invites[str(join_token)] = user_id
                 flush_json(data_file, data)
@@ -50,12 +76,12 @@ def start(update, context):
                 logging.info(f'✅  {name}({user_id}) was successfully registered')
             else:
                 context.bot.send_message(chat_id=update.effective_chat.id, text=Text.broken_link)
-                logging.warning(f'⚠️  {name}({user_id}) tried to use taken link')
+                logging.info(f'⚠️  {name}({user_id}) tried to use taken link')
         else:
             context.bot.send_message(chat_id=update.effective_chat.id, text=Text.user_in_base)
-            logging.warning(f'🤔  {name}({user_id}) tried to register again')
+            logging.info(f'🤔  {name}({user_id}) tried to register again')
     else:
-        logging.warning(f'❌  {name}({user_id}) tried to register without real link')
+        logging.info(f'❌  {name}({user_id}) tried to register without real link')
 
 
 def gen_link(update, context):
@@ -82,30 +108,33 @@ def open_server(update, context):
     else:
         return
     name = data[str(user_id)]["name"]
+    if data[str(user_id)]["snapshot_id"] == "":
+        image = 25660860
+    else:
+        image = data[str(user_id)]["snapshot_id"]
     try:
         if data[str(user_id)]["server_ip"] == "":
             ip = get_ip_address(data)
             create_response = client.servers.create(
                 name='cloud-pc-{}'.format(data[str(user_id)]["name"]),
                 server_type=ServerType(name="cpx31"),
-                image=Image(id=25660860),
+                image=Image(id=image),
                 ssh_keys=[SSHKey(id=1884416)],
                 networks=[Network(id=135205)],
                 location=Location(id=2)
             )
             data[str(user_id)]["server_ip"] = ip
             data[str(user_id)]["server_id"] = create_response.server.id
-            os.system(f'/usr/local/samba/bin/samba-tool dns add wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {admin_password}')
+            samba_tool("add", name, ip)
             flush_json(data_file, data)
             context.bot.send_message(chat_id=update.effective_chat.id, text=t.creation_complete)
-            logging.info(f'⬆️ {name}({user_id}) created server Cloud-PC-{name}')
+            logging.info(f'⬆️ {name}({user_id}) created server on {ip}')
         else:
             context.bot.send_message(chat_id=update.effective_chat.id, text=t.user_have_server)
-            logging.warning(f'⚠️ {name}({user_id}) tried create second server')
-            return
-    except:
+            logging.info(f'⚠️ {name}({user_id}) tried to create second server')
+    except Exception as err:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.open_server_error)
-        logging.error(f'❌ {name}({user_id}) could not create server')
+        logging.error(f'❌ {name}({user_id}) could not create server, {err}')
 
 
 def close_server(update, context):
@@ -119,27 +148,62 @@ def close_server(update, context):
     else:
         return
     name = data[str(user_id)]["name"]
-    ip = data[str(user_id)]["server_ip"]
-    server_id = data[str(user_id)]["server_id"]
-    creation_timestamp = data[str(user_id)]["timestamp"]
+    ip = str(data[str(user_id)]["server_ip"])
+    server_id = str(data[str(user_id)]["server_id"])
     try:
-        response = client.servers.shutdown(server=Server(id=int(server_id)))
-        response.wait_until_finished()
-        client.servers.delete(server=Server(id=int(server_id)))
-        os.system(f'/usr/local/samba/bin/samba-tool dns delete wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A 192.168.89.{ip} -U robot --password {admin_password}')
-        os.system(f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-{name}')
+        logging.info(server_id+' stopping server ')
+        msg = context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_started)
+
+        response_shutdown = client.servers.shutdown(server=Server(id=int(server_id)))
+        response_shutdown.wait_until_finished(max_retries=80)
+        logging.info(server_id+' shutdown complete ')
+
+        response_create_snapshot = client.servers.create_image(server=Server(id=int(server_id)), description="cloud-pc-{}".format(name))
+        response_create_snapshot.action.wait_until_finished(max_retries=80)
+        logging.info(server_id+' image create complete')
+
+#       client.servers.delete(server=Server(id=int(server_id)))
+        logging.info(server_id+'delete complete')
+
+        samba_tool("delete",name,ip)
+        samba_tool("computer delete",name)
+        logging.info(server_id+' samba-clear complete')
+
         data[str(user_id)]["server_ip"] = ""
         data[str(user_id)]["server_id"] = ""
-        data[str(user_id)]["timestamp"] = ""
+        data[str(user_id)]["snapshot_id"] = response_create_snapshot.image.id
         flush_json(data_file, data)
+#       context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=msg.message_id, text=t.deletion_complete)
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete)
-        logging.info(f'⬇️ {name}({user_id}) deleted server {ip}')
-    except:
+        logging.info(f'⬇️ {name}({user_id}) deleted server on {ip}')
+    except Exception as err:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error)
-        logging.error(f'❌ {name}({user_id}) could not delete server {ip}')
+        logging.error(f'❌ {name}({user_id}) could not delete server on {ip}, {err}')
 
 
-def gen_join_token(user="unknown"):
+def ping(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Pong!")
+    logging.info('ping ')
+    if len(context.args) == 1: 
+        time.sleep(int(context.args[0]))
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Pong-Pong!")
+        logging.info('pong')
+
+
+def snapshot(update, context):
+    if len(context.args) == 0:
+        context.bot.send_message(chat_id=update.effective_chat.id, text="server id needed")
+        return
+              
+    logging.info('testing snapshot')
+    context.bot.send_message(chat_id=update.effective_chat.id, text="creating snapshot "+context.args[0])
+    response_create_snapshot = client.servers.create_image(server=Server(id=int(context.args[0])), description="test")
+    response_create_snapshot.action.wait_until_finished(max_retries=80)
+    context.bot.send_message(chat_id=update.effective_chat.id, text="snapshot created "+context.args[0])
+    logging.info('snapshot created '+context.args[0])
+
+
+def gen_join_token(user):
     letters = string.ascii_letters+string.digits
     result_str = ''.join(random.choice(letters) for i in range(24))+"--"+user
     return result_str
@@ -154,7 +218,7 @@ def get_ip_address(data):
     for token in data:
         if data[str(token)]["server_ip"] != "":
             ip_pool.append(int(data[token]["server_ip"]))
-    for ip in range(5, 255):
+    for ip in range(7, 255):
         if ip not in ip_pool:
             return ip
 
@@ -186,8 +250,12 @@ def main():
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("gen_link", gen_link, admin_filter))
-    dp.add_handler(CommandHandler("open", open_server, user_filter))
-    dp.add_handler(CommandHandler("close", close_server, user_filter))
+    dp.add_handler(CommandHandler("open", open_server, user_filter, run_async=True))
+    dp.add_handler(CommandHandler("close", close_server, user_filter, run_async=True))
+    dp.add_handler(CommandHandler("ping", ping, user_filter, run_async=True))
+    dp.add_handler(CommandHandler("snapshot", snapshot, user_filter, run_async=True))
+
+    systemd.daemon.notify('READY=1')
 
     updater.start_polling()
 
