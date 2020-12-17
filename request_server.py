@@ -1,5 +1,6 @@
 from flask import Flask, request
 from server_operator import load_json, data_file
+import systemd.daemon
 import os
 import telegram.ext
 import logging
@@ -32,3 +33,4 @@ def is_ready(name):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
+    systemd.daemon.notify('READY=1')

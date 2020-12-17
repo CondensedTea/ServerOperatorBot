@@ -7,7 +7,7 @@ import json
 import re
 import time
 from text import Text
-import systemd
+import systemd.daemon
 from hcloud import Client
 from hcloud.images.domain import Image
 from hcloud.servers.domain import Server
