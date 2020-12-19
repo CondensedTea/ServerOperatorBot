@@ -15,6 +15,7 @@ from hcloud.server_types.domain import ServerType
 from hcloud.locations.domain import Location
 from hcloud.ssh_keys.domain import SSHKey
 from hcloud.networks.domain import Network
+from hcloud import APIException
 
 import subprocess
 import shlex
@@ -28,9 +29,7 @@ log_file = "bot.log"
 admin_password = os.environ["ROBOT"]
 t = Text
 
-logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-logger = logging.getLogger("ServerOperatorBot")
-logger.setLevel(logging.WARNING)
+logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING)
 
 client = Client(token=os.environ["TOKEN_HCLOUD"], poll_interval=30)
 admin_filter = Filters.user()
@@ -47,9 +46,9 @@ def samba_tool(command, name, ip=""):
     logging.warning('Subprocess: ' + command_line_args[0])
 
     try:
-        command_line_process = subprocess.Popen(command_line_args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,)
-        (out, err) = command_line_process.communicate()
-        logging.info("samba-tool: "+str(out)+" "+str(err))
+        command_line_process = subprocess.Popen(command_line_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,)
+        out, err = command_line_process.communicate()
+        logging.warning("samba-tool: {} \n Out: {}, Err: {}".format(str(command), str(out), str(err)))
     except (OSError, CalledProcessError) as exception:
         logging.warning('Exception occurred: ' + str(exception))
         logging.warning('Subprocess failed')
@@ -162,19 +161,18 @@ def close_server(update, context):
         response_create_snapshot.action.wait_until_finished(max_retries=80)
         logging.info(server_id+' image create complete')
 
-#       client.servers.delete(server=Server(id=int(server_id)))
+        client.servers.delete(server=Server(id=int(server_id)))
         logging.info(server_id+'delete complete')
 
-        samba_tool("delete",name,ip)
-        samba_tool("computer delete",name)
+        samba_tool("delete", name, ip)
+        samba_tool("computer delete", name)
         logging.info(server_id+' samba-clear complete')
 
         data[str(user_id)]["server_ip"] = ""
         data[str(user_id)]["server_id"] = ""
         data[str(user_id)]["snapshot_id"] = response_create_snapshot.image.id
         flush_json(data_file, data)
-#       context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=msg.message_id, text=t.deletion_complete)
-        context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_complete)
+        context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=msg.message_id, text=t.deletion_complete)
         logging.info(f'⬇️ {name}({user_id}) deleted server on {ip}')
     except Exception as err:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error)
@@ -218,7 +216,7 @@ def get_ip_address(data):
     for token in data:
         if data[str(token)]["server_ip"] != "":
             ip_pool.append(int(data[token]["server_ip"]))
-    for ip in range(7, 255):
+    for ip in range(8, 255):
         if ip not in ip_pool:
             return ip
 
