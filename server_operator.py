@@ -108,7 +108,7 @@ def open_server(update, context):
         return
     name = data[str(user_id)]["name"]
     if data[str(user_id)]["snapshot_id"] == "":
-        image = 28350552
+        image = 28353196
     else:
         image = data[str(user_id)]["snapshot_id"]
     try:
