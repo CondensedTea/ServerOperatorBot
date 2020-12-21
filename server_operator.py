@@ -29,7 +29,7 @@ log_file = "bot.log"
 admin_password = os.environ["ROBOT"]
 t = Text
 
-logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING)
+logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 client = Client(token=os.environ["TOKEN_HCLOUD"], poll_interval=30)
 admin_filter = Filters.user()

@@ -18,8 +18,8 @@ def get_name():
     data = load_json(data_file)
     for telegram_id in data:
         name_resolve['{}{}'.format(hcloud_network, data[telegram_id]["server_ip"])] = data[telegram_id]["name"]
-    return name_resolve[str(request.remote_addr)]
     logging.info("/get_name was called from {}".format(request.remote_addr))
+    return name_resolve[str(request.remote_addr)]
 
 
 @app.route('/user/<name>')
