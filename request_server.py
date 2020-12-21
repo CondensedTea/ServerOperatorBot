@@ -28,8 +28,7 @@ def is_ready(name):
     data = load_json(data_file)
     for telegram_id in data:
         id_resolve[data[telegram_id]["name"]] = telegram_id
-
-    bot.sendMessage(chat_id=id_resolve[name], text="Удаленный рабочий стол готов к работе")
+    bot.sendMessage(chat_id=id_resolve[name.lower()], text="Удаленный рабочий стол готов к работе")
     logging.info("ReadyUp was called from {} by {}".format(request.remote_addr, name))
     return '', 202
 
