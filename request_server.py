@@ -9,7 +9,7 @@ app = Flask(__name__)
 bot = telegram.Bot(token=os.environ["TOKEN_SO"])
 hcloud_network = "192.168.89."
 log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+log.setLevel(logging.INFO)
 
 
 @app.route('/get_name')
@@ -19,6 +19,7 @@ def get_name():
     for telegram_id in data:
         name_resolve['{}{}'.format(hcloud_network, data[telegram_id]["server_ip"])] = data[telegram_id]["name"]
     return name_resolve[str(request.remote_addr)]
+    logging.info("/get_name was called from {}".format(request.remote_addr))
 
 
 @app.route('/user/<name>')
@@ -29,8 +30,9 @@ def is_ready(name):
         id_resolve[data[telegram_id]["name"]] = telegram_id
 
     bot.sendMessage(chat_id=id_resolve[name], text="Удаленный рабочий стол готов к работе")
+    logging.info("ReadyUp was called from {} by {}".format(request.remote_addr, name))
     return '', 202
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
     systemd.daemon.notify('READY=1')
+    app.run(host='0.0.0.0')

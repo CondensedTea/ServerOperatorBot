@@ -108,7 +108,7 @@ def open_server(update, context):
         return
     name = data[str(user_id)]["name"]
     if data[str(user_id)]["snapshot_id"] == "":
-        image = 25660860
+        image = 28350552
     else:
         image = data[str(user_id)]["snapshot_id"]
     try:
@@ -155,14 +155,14 @@ def close_server(update, context):
 
         response_shutdown = client.servers.shutdown(server=Server(id=int(server_id)))
         response_shutdown.wait_until_finished(max_retries=80)
-        logging.info(server_id+' shutdown complete ')
+        logging.info(server_id+' shutdown complete')
 
         response_create_snapshot = client.servers.create_image(server=Server(id=int(server_id)), description="cloud-pc-{}".format(name))
         response_create_snapshot.action.wait_until_finished(max_retries=80)
         logging.info(server_id+' image create complete')
 
         client.servers.delete(server=Server(id=int(server_id)))
-        logging.info(server_id+'delete complete')
+        logging.info(server_id+' delete complete')
 
         samba_tool("delete", name, ip)
         samba_tool("computer delete", name)
