@@ -15,7 +15,6 @@ from hcloud.server_types.domain import ServerType
 from hcloud.locations.domain import Location
 from hcloud.ssh_keys.domain import SSHKey
 from hcloud.networks.domain import Network
-from hcloud import APIException
 
 import subprocess
 import shlex
@@ -26,6 +25,7 @@ data_file = "data.json"
 invites_file = "invites.json"
 text_file = "text.py"
 log_file = "bot.log"
+default_image = 28353196
 admin_password = os.environ["ROBOT"]
 t = Text
 
@@ -108,7 +108,7 @@ def open_server(update, context):
         return
     name = data[str(user_id)]["name"]
     if data[str(user_id)]["snapshot_id"] == "":
-        image = 28353196
+        image = default_image
     else:
         image = data[str(user_id)]["snapshot_id"]
     try:
@@ -150,23 +150,19 @@ def close_server(update, context):
     ip = str(data[str(user_id)]["server_ip"])
     server_id = str(data[str(user_id)]["server_id"])
     try:
-        logging.info(server_id+' stopping server ')
+        logging.warning("Starting server({}) close".format(server_id))
         msg = context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_started)
 
         response_shutdown = client.servers.shutdown(server=Server(id=int(server_id)))
         response_shutdown.wait_until_finished(max_retries=80)
-        logging.info(server_id+' shutdown complete')
+        logging.warning("Server({}) shutdown complete".format(server_id))
 
         response_create_snapshot = client.servers.create_image(server=Server(id=int(server_id)), description="cloud-pc-{}".format(name))
         response_create_snapshot.action.wait_until_finished(max_retries=80)
-        logging.info(server_id+' image create complete')
+        logging.warning("Image from server({}) creation complete".format(server_id))
 
         client.servers.delete(server=Server(id=int(server_id)))
-        logging.info(server_id+' delete complete')
-
-        samba_tool("delete", name, ip)
-        samba_tool("computer delete", name)
-        logging.info(server_id+' samba-clear complete')
+        logging.warning("Server({}) deletion complete".format(server_id))
 
         data[str(user_id)]["server_ip"] = ""
         data[str(user_id)]["server_id"] = ""
@@ -177,6 +173,37 @@ def close_server(update, context):
     except Exception as err:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error)
         logging.error(f'❌ {name}({user_id}) could not delete server on {ip}, {err}')
+
+
+def clear(update, context):
+    data = load_json(data_file)
+    for tg_id in data:
+        if data[str(tg_id)]["name"] == context.args[0]:
+            user_id = tg_id
+    name = data[str(user_id)]["name"]
+    ip = data[str(user_id)]["server_ip"]
+    server_id = data[str(user_id)]["server_id"]
+    try:
+        response_shutdown = client.servers.shutdown(server=Server(id=int(server_id)))
+        response_shutdown.wait_until_finished(max_retries=80)
+        logging.warning("Server({}) shutdown complete".format(server_id))
+
+        client.servers.delete(server=Server(id=int(server_id)))
+        logging.warning("Server({}) deletion complete".format(server_id))
+
+        samba_tool("delete", name, ip)
+        samba_tool("computer delete", name)
+        logging.info(server_id+' samba-clear complete')
+
+        data[str(user_id)]["server_ip"] = ""
+        data[str(user_id)]["server_id"] = ""
+        data[str(user_id)]["snapshot_id"] = ""
+        flush_json(data_file, data)
+
+        context.bot.send_message(chat_id=update.effective_chat.id, text=t.clear_complete)
+    except Exception as err:
+        context.bot.send_message(chat_id=update.effective_chat.id, text=t.clear_error+name)
+        logging.error(f'❌ Could not clear user {name}, {err}')
 
 
 def ping(update, context):
@@ -250,6 +277,7 @@ def main():
     dp.add_handler(CommandHandler("gen_link", gen_link, admin_filter))
     dp.add_handler(CommandHandler("open", open_server, user_filter, run_async=True))
     dp.add_handler(CommandHandler("close", close_server, user_filter, run_async=True))
+    dp.add_handler(CommandHandler("clear", clear, admin_filter, run_async=True))
     dp.add_handler(CommandHandler("ping", ping, user_filter, run_async=True))
     dp.add_handler(CommandHandler("snapshot", snapshot, user_filter, run_async=True))
 

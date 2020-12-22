@@ -8,3 +8,5 @@ class Text:
     deletion_started = "Выключаю рабочее место..."
     deletion_complete = "Рабочее место успешно выключено"
     deletion_error = "Не удалось выключить Ваше рабочее место, обратитесь в поддержку a.b.tyshkevich@rtdprk.ru"
+    clear_complete = "Очистка пользователя прошла успешно"
+    clear_error = "Не удалось очитстить пользователя "
