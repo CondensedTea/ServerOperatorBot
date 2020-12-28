@@ -5,7 +5,6 @@ import string
 import logging
 import json
 import re
-import time
 from text import Text
 import systemd.daemon
 from hcloud import Client
@@ -177,11 +176,10 @@ def close_server(update, context):
 
 def clear(update, context):
     data = load_json(data_file)
-    for tg_id in data:
-        if data[str(tg_id)]["name"] == context.args[0]:
-            user_id = tg_id
+    user_id = context.args[0]
     name = data[str(user_id)]["name"]
     ip = data[str(user_id)]["server_ip"]
+    image_id = data[str(user_id)]["snapshot_id"]
     server_id = data[str(user_id)]["server_id"]
     try:
         response_shutdown = client.servers.shutdown(server=Server(id=int(server_id)))
@@ -191,9 +189,12 @@ def clear(update, context):
         client.servers.delete(server=Server(id=int(server_id)))
         logging.warning("Server({}) deletion complete".format(server_id))
 
+        client.images.delete(image=Image(id=image_id))
+        logging.warning("Snapshot deleted")
+
         samba_tool("delete", name, ip)
         samba_tool("computer delete", name)
-        logging.info(server_id+' samba-clear complete')
+        logging.warning(server_id+' samba-clear complete')
 
         data[str(user_id)]["server_ip"] = ""
         data[str(user_id)]["server_id"] = ""
@@ -204,28 +205,6 @@ def clear(update, context):
     except Exception as err:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.clear_error+name)
         logging.error(f'❌ Could not clear user {name}, {err}')
-
-
-def ping(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Pong!")
-    logging.info('ping ')
-    if len(context.args) == 1: 
-        time.sleep(int(context.args[0]))
-        context.bot.send_message(chat_id=update.effective_chat.id, text="Pong-Pong!")
-        logging.info('pong')
-
-
-def snapshot(update, context):
-    if len(context.args) == 0:
-        context.bot.send_message(chat_id=update.effective_chat.id, text="server id needed")
-        return
-              
-    logging.info('testing snapshot')
-    context.bot.send_message(chat_id=update.effective_chat.id, text="creating snapshot "+context.args[0])
-    response_create_snapshot = client.servers.create_image(server=Server(id=int(context.args[0])), description="test")
-    response_create_snapshot.action.wait_until_finished(max_retries=80)
-    context.bot.send_message(chat_id=update.effective_chat.id, text="snapshot created "+context.args[0])
-    logging.info('snapshot created '+context.args[0])
 
 
 def gen_join_token(user):
@@ -245,7 +224,7 @@ def get_ip_address(data):
             ip_pool.append(int(data[token]["server_ip"]))
     for ip in range(8, 255):
         if ip not in ip_pool:
-            return ip
+            return str(ip)
 
 
 def load_json(json_file):
@@ -278,8 +257,6 @@ def main():
     dp.add_handler(CommandHandler("open", open_server, user_filter, run_async=True))
     dp.add_handler(CommandHandler("close", close_server, user_filter, run_async=True))
     dp.add_handler(CommandHandler("clear", clear, admin_filter, run_async=True))
-    dp.add_handler(CommandHandler("ping", ping, user_filter, run_async=True))
-    dp.add_handler(CommandHandler("snapshot", snapshot, user_filter, run_async=True))
 
     systemd.daemon.notify('READY=1')
 
