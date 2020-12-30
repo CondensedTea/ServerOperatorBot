@@ -135,11 +135,12 @@ def open_server(update, context):
                 networks=[Network(id=135205)],
                 location=Location(id=2)
             )
-            delete_snapshot_responce = client.images.delete(image=Image(id=int(u.snapshot_id)))
-            delete_snapshot_responce.action.wait_until_finished(max_retries=80)
+            if u.snapshot_id != "":
+                delete_snapshot_response = client.images.delete(image=Image(id=int(u.snapshot_id)))
+                delete_snapshot_response.action.wait_until_finished(max_retries=80)
+                u.snapshot_id = ""
             u.server_ip = ip
             u.server_id = create_response.server.id
-            u.snapshot_id = ""
             samba_tool("add", u.name, ip)
             flush_json(data_file, u.data)
             context.bot.send_message(chat_id=u.id, text=t.creation_complete)
@@ -194,8 +195,8 @@ def close_server(update, context):
         logging.error(f'❌ {u.name}({u.id}) could not delete server on {u.server_ip}, {err}')
 
 
-def clear(context):
-    """
+def clear(update, context):
+    """z
     Bot command for clearing users server and samba computer instance. Takes as argument name of user
     :param context:
     :return:
