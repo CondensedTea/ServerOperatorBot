@@ -39,10 +39,10 @@ class User:
     def __init__(self, telegram_id):
         self.data = load_json(data_file)
         self.id = telegram_id
-        self.name = self.data[str(telegram_id)]["data"]
+        self.name = self.data[str(telegram_id)]["name"]
         self.server_ip = self.data[str(telegram_id)]["server_ip"]
-        self.server_id = self.data[str(telegram_id)]["server_id"]
-        self.snapshot_id = self.data[str(telegram_id)]["snapshot_id"]
+        self.server_id = int(self.data[str(telegram_id)]["server_id"])
+        self.snapshot_id = int(self.data[str(telegram_id)]["snapshot_id"])
 
 
 def start(update, context):
@@ -135,8 +135,11 @@ def open_server(update, context):
                 networks=[Network(id=135205)],
                 location=Location(id=2)
             )
+            delete_snapshot_responce = client.images.delete(image=Image(id=u.snapshot_id))
+            delete_snapshot_responce.action.wait_until_finished(max_retries=80)
             u.server_ip = ip
             u.server_id = create_response.server.id
+            u.snapshot_id = ""
             samba_tool("add", u.name, ip)
             flush_json(data_file, u.data)
             context.bot.send_message(chat_id=u.id, text=t.creation_complete)
