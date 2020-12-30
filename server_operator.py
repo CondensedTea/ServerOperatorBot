@@ -181,6 +181,7 @@ def close_server(update, context):
         else:
             context.bot.send_message(chat_id=u.id, text=t.no_server)
             logging.info(f'⚠️ {u.name}({u.id}) tried to call /close without server')
+            return
 
         u.server_ip = ""
         u.server_id = ""
