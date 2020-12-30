@@ -144,7 +144,7 @@ def open_server(update, context):
             u.server_id = create_response.server.id
             samba_tool("add", u.name, ip)
             flush_json(data_file, u.data)
-            context.bot.edit_message_text(chat_id=u.id, msg=msg, text=t.creation_complete)
+            context.bot.edit_message_text(chat_id=u.id, message_id=msg.message_id, text=t.creation_complete)
             logging.info(f'⬆️ {u.name}({u.id}) created server on {u.server_ip}')
         else:
             context.bot.send_message(chat_id=u.id, text=t.user_have_server)
