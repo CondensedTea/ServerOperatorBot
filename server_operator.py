@@ -38,7 +38,7 @@ user_filter = Filters.user()
 class User:
     def __init__(self, telegram_id):
         self.data = load_json(data_file)
-        self.id = telegram_id
+        self.id = int(telegram_id)
         self.name = self.data[str(telegram_id)]["name"]
         self.server_ip = self.data[str(telegram_id)]["server_ip"]
         self.server_id = int(self.data[str(telegram_id)]["server_id"])
@@ -164,19 +164,23 @@ def close_server(update, context):
     else:
         u = User(context.args[0])
     try:
-        logging.warning("Starting server({}) close".format(u.server_id))
-        msg = context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_started)
+        if u.server_id is not "":
+            logging.warning("Starting to close server({})".format(u.server_id))
+            msg = context.bot.send_message(chat_id=u.id, text=t.deletion_started)
 
-        response_shutdown = client.servers.shutdown(server=Server(id=int(u.server_id)))
-        response_shutdown.wait_until_finished(max_retries=80)
-        logging.warning("Server({}) shutdown complete".format(u.server_id))
+            response_shutdown = client.servers.shutdown(server=Server(id=int(u.server_id)))
+            response_shutdown.wait_until_finished(max_retries=80)
+            logging.warning("Server({}) shutdown complete".format(u.server_id))
 
-        response_create_snapshot = client.servers.create_image(server=Server(id=int(u.server_id)), description="cloud-pc-{}".format(u.name))
-        response_create_snapshot.action.wait_until_finished(max_retries=80)
-        logging.warning("Image from server({}) creation complete".format(u.server_id))
+            response_create_snapshot = client.servers.create_image(server=Server(id=int(u.server_id)), description="cloud-pc-{}".format(u.name))
+            response_create_snapshot.action.wait_until_finished(max_retries=80)
+            logging.warning("Image from server({}) creation complete".format(u.server_id))
 
-        client.servers.delete(server=Server(id=int(u.server_id)))
-        logging.warning("Server({}) deletion complete".format(u.server_id))
+            client.servers.delete(server=Server(id=int(u.server_id)))
+            logging.warning("Server({}) deletion complete".format(u.server_id))
+        else:
+            context.bot.send_message(chat_id=u.id, text=t.no_server)
+            logging.info(f'⚠️ {u.name}({u.id}) tried to call /close without server')
 
         u.server_ip = ""
         u.server_id = ""
