@@ -105,7 +105,7 @@ def list_users(update, context):
     u = User(update.message.from_user.id)
     user_table = "Список пользователей: \n"
     for user in u.data:
-        user_table += ("{} -- {} \n".format(u.data[str(user)]["name"], user))
+        user_table += "{} -- {} \n".format(u.data[str(user)]["name"], user)
     context.bot.send_message(chat_id=u.id, text=user_table)
 
 
@@ -125,6 +125,7 @@ def open_server(update, context):
     else:
         image = u.snapshot_id
     try:
+        msg = context.bot.send_message(chat_id=u.id, text=t.creation_began)
         if u.server_ip == "":
             ip = get_ip_address(u.data)
             create_response = client.servers.create(
@@ -143,7 +144,7 @@ def open_server(update, context):
             u.server_id = create_response.server.id
             samba_tool("add", u.name, ip)
             flush_json(data_file, u.data)
-            context.bot.send_message(chat_id=u.id, text=t.creation_complete)
+            context.bot.edit_message_text(chat_id=u.id, msg=msg, text=t.creation_complete)
             logging.info(f'⬆️ {u.name}({u.id}) created server on {u.server_ip}')
         else:
             context.bot.send_message(chat_id=u.id, text=t.user_have_server)
@@ -165,7 +166,7 @@ def close_server(update, context):
     else:
         u = User(context.args[0])
     try:
-        if u.server_id is not "":
+        if u.server_id != "":
             logging.warning("Starting to close server({})".format(u.server_id))
             msg = context.bot.send_message(chat_id=u.id, text=t.deletion_started)
 
