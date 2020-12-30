@@ -35,6 +35,16 @@ admin_filter = Filters.user()
 user_filter = Filters.user()
 
 
+class User:
+    def __init__(self, telegram_id):
+        self.data = load_json(data_file)
+        self.id = telegram_id
+        self.name = self.data[str(telegram_id)]["data"]
+        self.server_ip = self.data[str(telegram_id)]["server_ip"]
+        self.server_id = self.data[str(telegram_id)]["server_id"]
+        self.snapshot_id = self.data[str(telegram_id)]["snapshot_id"]
+
+
 def start(update, context):
     """
     Starting command for bot. With /start link, allows to register in database with token.
@@ -42,29 +52,28 @@ def start(update, context):
     :param context: context of the bot
     :return: nothing
     """
-    data = load_json(data_file)
+    u = User(update.message.from_user.id)
     invites = load_json(invites_file)
     join_token = extract_join_token(context.args)
-    user_id = update.message.from_user.id
     name = re.search(r'--(.*)', join_token)
     if join_token in invites.keys():
-        if f'{user_id}' not in data.keys():
+        if f'{u.id}' not in u.data.keys():
             if invites[str(join_token)] == "":
-                data[str(user_id)] = {"name": name, "server_ip": "", "server_id": "", "snapshot_id": ""}
-                user_filter.add_user_ids(user_id)
-                invites[str(join_token)] = user_id
-                flush_json(data_file, data)
+                u.data[u.id] = {"name": name, "server_ip": "", "server_id": "", "snapshot_id": ""}
+                user_filter.add_user_ids(u.id)
+                invites[str(join_token)] = u.id
+                flush_json(data_file, u.data)
                 flush_json(invites_file, invites)
-                context.bot.send_message(chat_id=update.effective_chat.id, text=Text.welcome)
-                logging.info(f'✅  {name}({user_id}) was successfully registered')
+                context.bot.send_message(chat_id=u.id, text=Text.welcome)
+                logging.info(f'✅  {name}({u.id}) was successfully registered')
             else:
-                context.bot.send_message(chat_id=update.effective_chat.id, text=Text.broken_link)
-                logging.info(f'⚠️  {name}({user_id}) tried to use taken link')
+                context.bot.send_message(chat_id=u.id, text=Text.broken_link)
+                logging.info(f'⚠️  {name}({u.id}) tried to use taken link')
         else:
-            context.bot.send_message(chat_id=update.effective_chat.id, text=Text.user_in_base)
-            logging.info(f'🤔  {name}({user_id}) tried to register again')
+            context.bot.send_message(chat_id=u.id, text=Text.user_in_base)
+            logging.info(f'🤔  {name}({u.id}) tried to register again')
     else:
-        logging.info(f'❌  {name}({user_id}) tried to register without real link')
+        logging.info(f'❌  {name}({u.id}) tried to register without real link')
 
 
 def gen_link(update, context):
@@ -77,13 +86,27 @@ def gen_link(update, context):
     if len(context.args) == 1:
         context.bot.send_message(chat_id=update.effective_chat.id, text="Для создания приглашения необходимо указать имя, /gen_link <имя>")
     else:
-        user_id = update.message.from_user.id
+        u = User(update.effective_chat.id)
         invites = load_json(invites_file)
         current_join_token = gen_join_token(context.args[0])
         invites[str(current_join_token)] = ""
         flush_json(invites_file, invites)
-        context.bot.send_message(chat_id=update.effective_chat.id, text=f'https://t.me/ServerOperatorBot?start={current_join_token}')
-        logging.info(f'🔗 Invite link was made by ({user_id}) for {context.args[0]}')
+        context.bot.send_message(chat_id=u.id, text=f'https://t.me/ServerOperatorBot?start={current_join_token}')
+        logging.info(f'🔗 Invite link was made by ({u.id}) for {context.args[0]}')
+
+
+def list_users(update, context):
+    """
+    List of users in database, only for admins in admin_list
+    :param update:
+    :param context:
+    :return:
+    """
+    u = User(update.message.from_user.id)
+    user_table = "Список пользователей: \n"
+    for user in u.data:
+        user_table += ("{} -- {} \n".format(u.data[str(user)]["name"], user))
+    context.bot.send_message(chat_id=u.id, text=user_table)
 
 
 def open_server(update, context):
@@ -93,43 +116,37 @@ def open_server(update, context):
     :param context:
     :return:
     """
-    data = load_json(data_file)
     if len(context.args) == 0:
-        user_id = update.message.from_user.id
-    elif update.message.from_user.id in admins_list:
-        for tg_id in data:
-            if data[str(tg_id)]["name"] == context.args[0]:
-                user_id = tg_id
+        u = User(update.effective_chat.id)
     else:
-        return
-    name = data[str(user_id)]["name"]
-    if data[str(user_id)]["snapshot_id"] == "":
+        u = User(context.args[0])
+    if u.snapshot_id == "":
         image = default_image
     else:
-        image = data[str(user_id)]["snapshot_id"]
+        image = u.snapshot_id
     try:
-        if data[str(user_id)]["server_ip"] == "":
-            ip = get_ip_address(data)
+        if u.server_ip == "":
+            ip = get_ip_address(u.data)
             create_response = client.servers.create(
-                name='cloud-pc-{}'.format(data[str(user_id)]["name"]),
+                name='cloud-pc-{}'.format(u.name),
                 server_type=ServerType(name="cpx31"),
                 image=Image(id=image),
                 ssh_keys=[SSHKey(id=1884416)],
                 networks=[Network(id=135205)],
                 location=Location(id=2)
             )
-            data[str(user_id)]["server_ip"] = ip
-            data[str(user_id)]["server_id"] = create_response.server.id
-            samba_tool("add", name, ip)
-            flush_json(data_file, data)
-            context.bot.send_message(chat_id=update.effective_chat.id, text=t.creation_complete)
-            logging.info(f'⬆️ {name}({user_id}) created server on {ip}')
+            u.server_ip = ip
+            u.server_id = create_response.server.id
+            samba_tool("add", u.name, ip)
+            flush_json(data_file, u.data)
+            context.bot.send_message(chat_id=u.id, text=t.creation_complete)
+            logging.info(f'⬆️ {u.name}({u.id}) created server on {u.server_ip}')
         else:
-            context.bot.send_message(chat_id=update.effective_chat.id, text=t.user_have_server)
-            logging.info(f'⚠️ {name}({user_id}) tried to create second server')
+            context.bot.send_message(chat_id=u.id, text=t.user_have_server)
+            logging.info(f'⚠️ {u.name}({u.id}) tried to create second server')
     except Exception as err:
-        context.bot.send_message(chat_id=update.effective_chat.id, text=t.open_server_error)
-        logging.error(f'❌ {name}({user_id}) could not create server, {err}')
+        context.bot.send_message(chat_id=u.id, text=t.open_server_error)
+        logging.error(f'❌ {u.name}({u.id}) could not create server, {err}')
 
 
 def close_server(update, context):
@@ -139,81 +156,67 @@ def close_server(update, context):
     :param context:
     :return:
     """
-    data = load_json(data_file)
     if len(context.args) == 0:
-        user_id = update.message.from_user.id
-    elif update.message.from_user.id in admins_list:
-        for tg_id in data:
-            if data[str(tg_id)]["name"] == context.args[0]:
-                user_id = tg_id
+        u = User(update.message.from_user.id)
     else:
-        return
-    name = data[str(user_id)]["name"]
-    ip = str(data[str(user_id)]["server_ip"])
-    server_id = str(data[str(user_id)]["server_id"])
+        u = User(context.args[0])
     try:
-        logging.warning("Starting server({}) close".format(server_id))
+        logging.warning("Starting server({}) close".format(u.server_id))
         msg = context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_started)
 
-        response_shutdown = client.servers.shutdown(server=Server(id=int(server_id)))
+        response_shutdown = client.servers.shutdown(server=Server(id=int(u.server_id)))
         response_shutdown.wait_until_finished(max_retries=80)
-        logging.warning("Server({}) shutdown complete".format(server_id))
+        logging.warning("Server({}) shutdown complete".format(u.server_id))
 
-        response_create_snapshot = client.servers.create_image(server=Server(id=int(server_id)), description="cloud-pc-{}".format(name))
+        response_create_snapshot = client.servers.create_image(server=Server(id=int(u.server_id)), description="cloud-pc-{}".format(u.name))
         response_create_snapshot.action.wait_until_finished(max_retries=80)
-        logging.warning("Image from server({}) creation complete".format(server_id))
+        logging.warning("Image from server({}) creation complete".format(u.server_id))
 
-        client.servers.delete(server=Server(id=int(server_id)))
-        logging.warning("Server({}) deletion complete".format(server_id))
+        client.servers.delete(server=Server(id=int(u.server_id)))
+        logging.warning("Server({}) deletion complete".format(u.server_id))
 
-        data[str(user_id)]["server_ip"] = ""
-        data[str(user_id)]["server_id"] = ""
-        data[str(user_id)]["snapshot_id"] = response_create_snapshot.image.id
-        flush_json(data_file, data)
-        context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=msg.message_id, text=t.deletion_complete)
-        logging.info(f'⬇️ {name}({user_id}) deleted server on {ip}')
+        u.server_ip = ""
+        u.server_id = ""
+        u.snapshot_id = response_create_snapshot.image.id
+        flush_json(data_file, u.data)
+        context.bot.edit_message_text(chat_id=u.id, message_id=msg.message_id, text=t.deletion_complete)
+        logging.info(f'⬇️ {u.name}({u.id}) deleted server on {u.server_ip}')
     except Exception as err:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error)
-        logging.error(f'❌ {name}({user_id}) could not delete server on {ip}, {err}')
+        logging.error(f'❌ {u.name}({u.id}) could not delete server on {u.server_ip}, {err}')
 
 
-def clear(update, context):
+def clear(context):
     """
     Bot command for clearing users server and samba computer instance. Takes as argument name of user
-    :param update:
     :param context:
     :return:
     """
-    data = load_json(data_file)
-    user_id = context.args[0]
-    name = data[str(user_id)]["name"]
-    ip = data[str(user_id)]["server_ip"]
-    image_id = data[str(user_id)]["snapshot_id"]
-    server_id = data[str(user_id)]["server_id"]
+    u = User(context.args[0])
     try:
-        response_shutdown = client.servers.shutdown(server=Server(id=int(server_id)))
+        response_shutdown = client.servers.shutdown(server=Server(id=int(u.server_id)))
         response_shutdown.wait_until_finished(max_retries=80)
-        logging.warning("Server({}) shutdown complete".format(server_id))
+        logging.warning("Server({}) shutdown complete".format(u.server_id))
 
-        client.servers.delete(server=Server(id=int(server_id)))
-        logging.warning("Server({}) deletion complete".format(server_id))
+        client.servers.delete(server=Server(id=int(u.server_id)))
+        logging.warning("Server({}) deletion complete".format(u.server_id))
 
-        client.images.delete(image=Image(id=image_id))
+        client.images.delete(image=Image(id=int(u.snapshot_id)))
         logging.warning("Snapshot deleted")
 
-        samba_tool("delete", name, ip)
-        samba_tool("computer delete", name)
-        logging.warning(server_id+' samba-clear complete')
+        samba_tool("delete", u.name, u.server_ip)
+        samba_tool("computer delete", u.name)
+        logging.warning(u.server_id+' samba-clear complete')
 
-        data[str(user_id)]["server_ip"] = ""
-        data[str(user_id)]["server_id"] = ""
-        data[str(user_id)]["snapshot_id"] = ""
-        flush_json(data_file, data)
+        u.server_ip = ""
+        u.server_id = ""
+        u.snapshot_id = ""
+        flush_json(data_file, u.data)
 
-        context.bot.send_message(chat_id=update.effective_chat.id, text=t.clear_complete)
+        context.bot.send_message(chat_id=u.id, text=t.clear_complete)
     except Exception as err:
-        context.bot.send_message(chat_id=update.effective_chat.id, text=t.clear_error+name)
-        logging.error(f'❌ Could not clear user {name}, {err}')
+        context.bot.send_message(chat_id=u.id, text=t.clear_error+u.name)
+        logging.error(f'❌ Could not clear user {u.name}, {err}')
 
 
 def samba_tool(command, name, ip=""):
@@ -330,9 +333,10 @@ def main():
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("gen_link", gen_link, admin_filter))
+    dp.add_handler(CommandHandler("list_users", list_users, admin_filter))
+    dp.add_handler(CommandHandler("clear", clear, admin_filter, run_async=True))
     dp.add_handler(CommandHandler("open", open_server, user_filter, run_async=True))
     dp.add_handler(CommandHandler("close", close_server, user_filter, run_async=True))
-    dp.add_handler(CommandHandler("clear", clear, admin_filter, run_async=True))
 
     systemd.daemon.notify('READY=1')
 
