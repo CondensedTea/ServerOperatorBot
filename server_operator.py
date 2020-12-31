@@ -44,11 +44,15 @@ class User:
         self.server_id = self.data[str(telegram_id)]["server_id"]
         self.snapshot_id = self.data[str(telegram_id)]["snapshot_id"]
 
+    def flush(self):
+        self.data[str(self.id)] = {"name": self.name, "server_ip": self.server_ip, "server_id": self.server_id, "snapshot_id": self.snapshot_id}
+        flush_json(self.data, data_file)
+
 
 def start(update, context):
     """
     Starting command for bot. With /start link, allows to register in database with token.
-    :param update: bot's updater
+    :param update: bots updater
     :param context: context of the bot
     :return: nothing
     """
@@ -62,7 +66,7 @@ def start(update, context):
                 u.data[u.id] = {"name": name, "server_ip": "", "server_id": "", "snapshot_id": ""}
                 user_filter.add_user_ids(u.id)
                 invites[str(join_token)] = u.id
-                flush_json(data_file, u.data)
+                u.flush()
                 flush_json(invites_file, invites)
                 context.bot.send_message(chat_id=u.id, text=Text.welcome)
                 logging.info(f'✅  {name}({u.id}) was successfully registered')
@@ -143,7 +147,7 @@ def open_server(update, context):
             u.server_ip = ip
             u.server_id = create_response.server.id
             samba_tool("add", u.name, ip)
-            flush_json(data_file, u.data)
+            u.flush()
             context.bot.edit_message_text(chat_id=u.id, message_id=msg.message_id, text=t.creation_complete)
             logging.info(f'⬆️ {u.name}({u.id}) created server on {u.server_ip}')
         else:
@@ -188,7 +192,7 @@ def close_server(update, context):
         u.server_ip = ""
         u.server_id = ""
         u.snapshot_id = response_create_snapshot.image.id
-        flush_json(data_file, u.data)
+        u.flush()
         context.bot.edit_message_text(chat_id=u.id, message_id=msg.message_id, text=t.deletion_complete)
         logging.info(f'⬇️ {u.name}({u.id}) deleted server on {u.server_ip}')
     except Exception as err:
@@ -197,8 +201,9 @@ def close_server(update, context):
 
 
 def clear(update, context):
-    """z
+    """
     Bot command for clearing users server and samba computer instance. Takes as argument name of user
+    :param update:
     :param context:
     :return:
     """
@@ -303,10 +308,10 @@ def load_json(json_file):
         return json.load(file)
 
 
-def flush_json(json_file, data):
+def flush_json(data, json_file):
     """
     Flushes (overrides) dict with data into json file
-    :param json_file: json file
+    :param json_file: json file to load
     :param data: dict with data
     :return: nothing
     """
@@ -332,7 +337,7 @@ def main():
     Main function called upon start. Creates user_filter (accessible for all users in bot database),
     admin_filter (accessible for users IDs from var admin_list).
     Next it starts updater for bot and creates commands.
-    At last it calls READY for systemd and ready to recieve commands from users
+    At last it calls READY for systemd and ready to receive commands from users
     :return:
     """
     user_filter.add_user_ids(get_user_ids(data_file))
