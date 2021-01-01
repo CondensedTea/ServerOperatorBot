@@ -29,7 +29,7 @@ def is_ready(name):
     for telegram_id in data:
         id_resolve[data[telegram_id]["name"]] = telegram_id
     bot.sendMessage(chat_id=id_resolve[name.lower()], text="Удаленный рабочий стол готов к работе")
-    logging.info("ReadyUp was called from {} by {}".format(request.remote_addr, name))
+    logging.info("ReadyUp was called from {} by {}".format(request.remote_addr, name.lower()))
     return '', 202
 
 if __name__ == '__main__':

@@ -5,6 +5,7 @@ import string
 import logging
 import json
 import re
+import sqlite3
 from text import Text
 import systemd.daemon
 from hcloud import Client
@@ -33,6 +34,32 @@ logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(nam
 client = Client(token=os.environ["TOKEN_HCLOUD"], poll_interval=30)
 admin_filter = Filters.user()
 user_filter = Filters.user()
+
+connection = sqlite3.connect("")
+
+
+class Database:
+    def __init__(self, telegram_id):
+        sql_query = """select u.name, s.server_ip, s.server_id, u.status, s.creation_date, s.snapshot_id, u.telegram_id
+        from Users as u join Servers as s on u.telegram_id = s.telegram_id where u.telegram_id = ?"""
+        (self.name,
+         self.server_ip,
+         self.server_id,
+         self.user_status,
+         self.creation_date,
+         self.snapshot_id) = db_query(sql_query, telegram_id)
+        self.id = telegram_id
+
+    def update(self):
+        sql_query = "update Servers set server_ip = ?, server_id = ?, creation_date = ?, snapshot_id = ? where telegram_id = ?"
+        data = (self.server_ip, self.server_id, self.creation_date, self.snapshot_id, self.id)
+        db_query(sql_query, data)
+
+# TODO: для работы Database.delete() нужно что бы структура в базе инициализировалась не на вызове /start, а на /open, замедляя скорость выполнения команды.
+    def delete(self):
+        sql_query = "delete from Servers where telegram_id = ?"
+        data = self.id
+        db_query(sql_query, data)
 
 
 class User:
@@ -141,7 +168,7 @@ def open_server(update, context):
                 location=Location(id=2)
             )
             if u.snapshot_id != "":
-                delete_snapshot_response = client.images.delete(image=Image(id=int(u.snapshot_id)))
+                delete_snapshot_response = client.images.delete(image=Image(id=u.snapshot_id))
                 delete_snapshot_response.action.wait_until_finished(max_retries=80)
                 u.snapshot_id = ""
             u.server_ip = ip
@@ -153,6 +180,8 @@ def open_server(update, context):
         else:
             context.bot.send_message(chat_id=u.id, text=t.user_have_server)
             logging.info(f'⚠️ {u.name}({u.id}) tried to create second server')
+    except sqlite3.Error as err:
+        context.bot.send_message(chat_id=update.message.from_user.id, text="SQLite failed to start")
     except Exception as err:
         context.bot.send_message(chat_id=u.id, text=t.open_server_error)
         logging.error(f'❌ {u.name}({u.id}) could not create server, {err}')
@@ -194,7 +223,7 @@ def close_server(update, context):
         u.snapshot_id = response_create_snapshot.image.id
         u.flush()
         context.bot.edit_message_text(chat_id=u.id, message_id=msg.message_id, text=t.deletion_complete)
-        logging.info(f'⬇️ {u.name}({u.id}) deleted server on {u.server_ip}')
+        logging.info(f'⬇️ {u.name}({u.id}) deleted server')
     except Exception as err:
         context.bot.send_message(chat_id=update.effective_chat.id, text=t.deletion_error)
         logging.error(f'❌ {u.name}({u.id}) could not delete server on {u.server_ip}, {err}')
@@ -202,7 +231,7 @@ def close_server(update, context):
 
 def clear(update, context):
     """
-    Bot command for clearing users server and samba computer instance. Takes as argument name of user
+    Bot command for clearing users server and samba computer instance. Takes as argument telegram id of user
     :param update:
     :param context:
     :return:
@@ -330,6 +359,15 @@ def get_user_ids(file):
     for user in data.keys():
         user_list.append(int(user))
     return user_list
+
+
+def db_query(query, data):
+    try:
+        with connection.cursor() as c:
+            return c.execute(query, data)
+    except sqlite3.Error as err:
+        logging.error("SQL query failed with error: {}".format(err))
+        raise sqlite3.Error
 
 
 def main():

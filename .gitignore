@@ -144,3 +144,4 @@ cython_debug/
 /invites.json
 /test.py
 /ServerOperator.log
+/test_db.sqlite
