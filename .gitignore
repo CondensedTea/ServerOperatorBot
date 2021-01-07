@@ -145,3 +145,4 @@ cython_debug/
 /test.py
 /ServerOperator.log
 /test_db.sqlite
+/docker-compose.yml
