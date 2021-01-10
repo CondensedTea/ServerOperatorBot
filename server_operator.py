@@ -4,6 +4,7 @@ import random
 import string
 import logging
 import re
+import systemd.daemon
 import sqlite_connector
 from sqlite_connector import Database, get_user_ids, get_ip_address
 from samba_connector import ActiveDirectory
@@ -21,7 +22,7 @@ import subprocess
 import shlex
 
 # Config
-log_file = "bot.log"
+log_file = os.environ["LOGFILE"]
 default_image = 28353196
 admin_password = os.environ["ROBOT"]
 token_h = os.environ["TOKEN_HCLOUD"]
@@ -31,7 +32,7 @@ support_email = "a.b.tyshkevich@rtdprk.ru"
 t = Text
 
 logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-sqlite_connector.config(filename="test_db.sqlite", lowest_ip=7)
+sqlite_connector.config(filename=os.environ["SQLITE_DB"], lowest_ip=7)
 
 client = Client(token=token_h, poll_interval=30)
 admin_filter = Filters.user()
@@ -280,6 +281,8 @@ def main():
     dp.add_handler(CommandHandler("clear", clear, admin_filter, run_async=True))
     dp.add_handler(CommandHandler("open", open_server, user_filter, run_async=True))
     dp.add_handler(CommandHandler("close", close_server, user_filter, run_async=True))
+
+    systemd.daemon.notify("READY=1")
 
     updater.start_polling()
 

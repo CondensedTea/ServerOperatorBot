@@ -1,15 +1,15 @@
 FROM ubuntu:20.10
 
 RUN apt update && \
-    apt install -y python3-samba \
-                   pip && \
+    apt install -y python3-samba pip && \
     rm -rf /var/lib/apt/lists/*
 
+COPY requirements.txt ServerOperator/requirements.txt
 WORKDIR ServerOperator/
-
-COPY server_operator.py request_server.py sqlite_connector.py samba_connector.py ServerOperator/
-
-COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
+
+COPY . ServerOperator/
+
+CMD python3 server_operator.py && python3 request_server.py
 
 EXPOSE 5000

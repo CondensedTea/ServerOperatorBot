@@ -1,6 +1,7 @@
 from flask import Flask, request
 from sqlite_connector import Database
 import os
+import systemd.daemon
 import telegram.ext
 import logging
 
@@ -31,4 +32,5 @@ def ready_up(name):
         return '', 202
 
 if __name__ == '__main__':
+    systemd.daemon.notify("READY=1")
     app.run(host='0.0.0.0')
