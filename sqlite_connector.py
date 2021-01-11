@@ -59,8 +59,10 @@ def config(filename, lowest_ip):
 
 def db_query(query, data=(), many=False):
     try:
-        c = sqlite3.connect(_database_name).cursor()
+        conn = sqlite3.connect(_database_name)
+        c = conn.cursor()
         c.execute(query, data)
+        conn.commit()
         if many:
             return c.fetchall()
         else:
