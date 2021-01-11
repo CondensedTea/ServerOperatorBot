@@ -81,7 +81,7 @@ def gen_link(update, context):
 
 def list_users(update, context):
     """
-    List of users in database, only for admins in admin_list
+    List of users in Users table, only for admins in admin_list
     :param update:
     :param context:
     :return:
@@ -90,6 +90,7 @@ def list_users(update, context):
     user_table = "Список пользователей: \n"
     for user in u.list_users():
         user_table += "{} -- {} \n".format(user[0], user[1])
+    logging.info("Listed users by request of {}".format(u.id))
     context.bot.send_message(chat_id=u.id, text=user_table)
 
 
