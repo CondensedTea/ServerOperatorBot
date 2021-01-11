@@ -18,9 +18,6 @@ from hcloud.locations.domain import Location
 from hcloud.ssh_keys.domain import SSHKey
 from hcloud.networks.domain import Network
 
-import subprocess
-import shlex
-
 # Config
 log_file = os.environ["LOGFILE"]
 default_image = 28353196
@@ -131,7 +128,7 @@ def open_server(update, context):
                 u.snapshot_id = None
             u.server_id = create_response.server.id
             u.creation_date = int(datetime.now().timestamp())
-            u.server_create()
+            u.server_create(u.server_ip, u.server_id, u.creation_date)
             context.bot.edit_message_text(chat_id=u.id, message_id=msg.message_id, text=t.creation_complete)
             logging.info(f'⬆️ {u.name}({u.id}) created server on {u.server_ip}')
         else:
@@ -211,34 +208,6 @@ def clear(update, context):
     except Exception as err:
         context.bot.send_message(chat_id=u.id, text=t.clear_error + u.name)
         logging.error(f'❌ Could not clear user {u.name}, {err}')
-
-
-def samba_tool(command, name, ip=""):
-    """
-    Function for interacting with samba-tool CLI, either samba-tool dns or samba-tool computer add
-    :param command: option for samba-tool to call
-    :param name: name of cloud-pc
-    :param ip: ip of cloud-pc
-    :return: False or nothing
-    """
-    if command == "computer delete":
-        command_line = f'/usr/local/samba/bin/samba-tool computer delete cloud-pc-{name}'
-    else:
-        command_line = f'/usr/local/samba/bin/samba-tool dns {command} wikijs-samba.hq.rtdprk.ru hq.rtdprk.ru cloud-pc-{name} A {ip} -U robot --password {admin_password}'
-
-    command_line_args = shlex.split(command_line)
-    logging.warning('Subprocess: ' + command_line_args[0])
-
-    try:
-        command_line_process = subprocess.Popen(command_line_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, )
-        out, err = command_line_process.communicate()
-        logging.warning("samba-tool: {} \n Out: {}, Err: {}".format(str(command), str(out), str(err)))
-    except (OSError, CalledProcessError) as exception:
-        logging.warning('Exception occurred: ' + str(exception))
-        logging.warning('Subprocess failed')
-        return False
-    else:
-        logging.warning('Subprocess finished')
 
 
 def gen_join_token(user):

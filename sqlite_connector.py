@@ -25,11 +25,6 @@ class Database:
                  (self.server_ip, self.server_id, self.creation_date, self.snapshot_id, self.id)
                  )
 
-    def server_create(self):
-        db_query("insert into Servers (server_ip, server_id, creation_date) values (?, ?, ?)",
-                 (self.server_ip, self.server_id, self.creation_date)
-                 )
-
     def server_delete(self):
         db_query("delete from Servers where user_id = ?", (self.id,))
 
@@ -48,6 +43,12 @@ class Database:
     @staticmethod
     def list_users():
         return db_query("select id, name from Users", many=True)
+
+    @staticmethod
+    def server_create(server_ip, server_id, creation_date):
+        db_query("insert into Servers (server_ip, server_id, creation_date) values (?, ?, ?)",
+                 (server_ip, server_id, creation_date)
+                 )
 
 
 def config(filename, lowest_ip):
