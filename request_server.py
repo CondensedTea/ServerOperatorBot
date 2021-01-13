@@ -18,7 +18,8 @@ def get_name():
         logging.warning("Received call for /get_name from unknown ip, {}".format(request.remote_addr))
     else:
         logging.info("/get_name was successfully called from {}".format(request.remote_addr))
-        return u.get_name()
+        (name,) = u.get_name()
+        return name
 
 
 @app.route('/user/<name>')
