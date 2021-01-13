@@ -23,7 +23,10 @@ class ActiveDirectory:
         self.samdb = SamDB(url=self.ldap_server, session_info=system_session(), credentials=self.creds, lp=self.lp)
 
     def add_computer(self, computername):
-        self.samdb.newcomputer(computername=computername, computerou='OU=CloudDesktops,DC=hq,DC=rtdprk,DC=ru')
+        try:
+            self.samdb.newcomputer(computername=computername, computerou='OU=CloudDesktops,DC=hq,DC=rtdprk,DC=ru')
+        except Exception as err:
+            raise err
 
     def remove_computer(self, computername):
         fulldn = "CN={},".format(computername)+"OU=CloudDesktops,DC=hq,DC=rtdprk,DC=ru"

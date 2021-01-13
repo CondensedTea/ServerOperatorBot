@@ -24,7 +24,7 @@ default_image = 28353196
 admin_password = os.environ["ROBOT"]
 token_h = os.environ["TOKEN_HCLOUD"]
 token_tg = os.environ["TOKEN_SO"]
-ad = ActiveDirectory("robot", admin_password, "10.110.0.6", "hq.rtdprk.ru")
+ad = ActiveDirectory("robot", admin_password, "192.168.89.4", "hq.rtdprk.ru")
 support_email = "a.b.tyshkevich@rtdprk.ru"
 t = Text
 
@@ -90,7 +90,7 @@ def list_users(update, context):
     user_table = "Список пользователей: \n"
     for user in u.list_users():
         user_table += "{} -- {} \n".format(user[0], user[1])
-    logging.info("Listed users by request of {}".format(u.id))
+    logging.info("Listed users by request of {}({})".format(u.name, u.id))
     context.bot.send_message(chat_id=u.id, text=user_table)
 
 

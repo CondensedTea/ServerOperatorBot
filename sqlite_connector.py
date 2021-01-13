@@ -45,9 +45,9 @@ class Database:
         return db_query("select id, name from Users", many=True)
 
     @staticmethod
-    def server_create(server_ip, server_id, creation_date):
-        db_query("insert into Servers (server_ip, server_id, creation_date) values (?, ?, ?)",
-                 (server_ip, server_id, creation_date)
+    def server_create(server_ip, server_id, creation_date, user_id):
+        db_query("insert into Servers (server_ip, server_id, creation_date, user_id) values (?, ?, ?, ?)",
+                 (server_ip, server_id, creation_date, user_id)
                  )
 
 
@@ -88,10 +88,11 @@ def get_user_ids():
 
 def get_ip_address():
     """
-    Function to distribute ip address from x to 255. It checks json for taken ips and gives next ip.
-    Have to make this one as hcloud api doesnt allow to create servers with predetermined, need to guess it.
-    :return: last octet for ip address
+    Function to distribute ip address from lowest free to 255. It checks database for taken ips and gives next ip.
+    Have to make this one as hcloud api doesnt allow to create servers with predetermined ips, need to guess it.
+    :return: full ip as u-string
     """
-    for ip in range(_lowest_ip+1, 255):
-        if ip not in db_query("select server_ip from Servers", many=True):
-            return "192.168.89.{}".format(ip)
+    ip_list = db_query("select server_ip from Servers", many=True)
+    for ip in range(_lowest_ip + 1, 255):
+        if (u'192.168.89.{}'.format(ip),) not in ip_list:
+            return u'192.168.89.{}'.format(ip)
