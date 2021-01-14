@@ -110,8 +110,8 @@ def open_server(update, context):
         image = u.snapshot_id
     try:
         msg = context.bot.send_message(chat_id=u.id, text=t.creation_began)
-        if not u.server_id:
-            if not u.server_ip:
+        if u.server_id is None:
+            if u.server_ip is None:
                 u.server_ip = get_ip_address()
                 ad.add_computer(u.computername)
                 ad.add_dns_record(u.computername, u.server_ip)
@@ -123,7 +123,7 @@ def open_server(update, context):
                 networks=[Network(id=135205)],
                 location=Location(id=2)
             )
-            if u.snapshot_id:
+            if u.snapshot_id is not None:
                 delete_snapshot_response = client.images.delete(image=Image(id=u.snapshot_id))
                 delete_snapshot_response.action.wait_until_finished(max_retries=80)
                 u.snapshot_id = None
