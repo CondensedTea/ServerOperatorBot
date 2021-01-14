@@ -7,8 +7,11 @@ import logging
 
 app = Flask(__name__)
 bot = telegram.Bot(token=os.environ["TOKEN_SO"])
+log_file = os.environ["LOG_FILE"]
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.WARNING)
+
+logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 
 @app.route('/get_name')
