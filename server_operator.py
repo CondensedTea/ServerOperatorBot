@@ -111,7 +111,10 @@ def open_server(update, context):
     try:
         msg = context.bot.send_message(chat_id=u.id, text=t.creation_began)
         if not u.server_id:
-            u.server_ip = get_ip_address()
+            if not u.server_ip:
+                u.server_ip = get_ip_address()
+                ad.add_computer(u.computername)
+                ad.add_dns_record(u.computername, u.server_ip)
             create_response = client.servers.create(
                 name='cloud-pc-{}'.format(u.name),
                 server_type=ServerType(name="cpx31"),
@@ -120,9 +123,6 @@ def open_server(update, context):
                 networks=[Network(id=135205)],
                 location=Location(id=2)
             )
-            ad.add_computer(u.computername)
-            ad.add_dns_record(u.computername, u.server_ip)
-
             if u.snapshot_id:
                 delete_snapshot_response = client.images.delete(image=Image(id=u.snapshot_id))
                 delete_snapshot_response.action.wait_until_finished(max_retries=80)
