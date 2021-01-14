@@ -110,7 +110,7 @@ def open_server(update, context):
         image = u.snapshot_id
     try:
         msg = context.bot.send_message(chat_id=u.id, text=t.creation_began)
-        if not u.server_ip:
+        if not u.server_id:
             u.server_ip = get_ip_address()
             create_response = client.servers.create(
                 name='cloud-pc-{}'.format(u.name),
@@ -142,7 +142,7 @@ def open_server(update, context):
 
 def close_server(update, context):
     """
-    Bot command for saving roaming profile data, taking snapshot of server and deleting server.
+    Bot command that saves roaming profile data, takes snapshot of server and deletes server.
     :param update:
     :param context:
     :return:
