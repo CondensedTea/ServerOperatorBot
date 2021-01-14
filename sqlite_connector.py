@@ -40,15 +40,20 @@ class Database:
     def ready_up(self):
         return db_query("select user_id from Servers where server_ip = ?", (self.server_ip,))
 
+    def server_create(self):
+        db_query("insert into Servers (server_ip, server_id, creation_date, user_id) values (?, ?, ?, ?)",
+                 (self.server_ip, self.server_id, self.creation_date, self.user_id)
+                 )
+
     @staticmethod
     def list_users():
         return db_query("select id, name from Users", many=True)
 
-    @staticmethod
-    def server_create(server_ip, server_id, creation_date, user_id):
-        db_query("insert into Servers (server_ip, server_id, creation_date, user_id) values (?, ?, ?, ?)",
-                 (server_ip, server_id, creation_date, user_id)
-                 )
+#    @staticmethod
+#    def server_create(server_ip, server_id, creation_date, user_id):
+#        db_query("insert into Servers (server_ip, server_id, creation_date, user_id) values (?, ?, ?, ?)",
+#                 (server_ip, server_id, creation_date, user_id)
+#                 )
 
 
 def config(filename, lowest_ip):

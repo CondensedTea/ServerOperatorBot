@@ -129,7 +129,8 @@ def open_server(update, context):
                 u.snapshot_id = None
             u.server_id = create_response.server.id
             u.creation_date = int(datetime.now().timestamp())  # TODO: finish creation date usage
-            u.server_create(u.server_ip, u.server_id, u.creation_date, u.id)
+#            u.server_create(u.server_ip, u.server_id, u.creation_date, u.id)
+            u.server_create()
             context.bot.edit_message_text(chat_id=u.id, message_id=msg.message_id, text=t.creation_complete)
             logging.info(f'⬆️ {u.name}({u.id}) created server on {u.server_ip}')
         else:
