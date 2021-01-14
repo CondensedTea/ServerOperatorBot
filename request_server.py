@@ -1,4 +1,5 @@
 from flask import Flask, request
+import sqlite_connector
 from sqlite_connector import Database
 import os
 import systemd.daemon
@@ -12,7 +13,7 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.WARNING)
 
 logging.basicConfig(filename=log_file, filemode="a", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-
+sqlite_connector.config(filename=os.environ["SQLITE_DB"], lowest_ip=7)
 
 @app.route('/get_name')
 def get_name():
