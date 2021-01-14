@@ -4,6 +4,7 @@ import random
 import string
 import logging
 import re
+import time
 import systemd.daemon
 import sqlite_connector
 from sqlite_connector import Database, get_user_ids, get_ip_address
@@ -111,10 +112,12 @@ def open_server(update, context):
     try:
         msg = context.bot.send_message(chat_id=u.id, text=t.creation_began)
         if u.server_id is None:
+            logging.info("Begging to create server")
             if u.server_ip is None:
                 u.server_ip = get_ip_address()
                 ad.add_computer(u.computername)
                 ad.add_dns_record(u.computername, u.server_ip)
+                logging.info("First server in chain, created DNS and AD records")
             create_response = client.servers.create(
                 name='cloud-pc-{}'.format(u.name),
                 server_type=ServerType(name="cpx31"),
@@ -123,14 +126,17 @@ def open_server(update, context):
                 networks=[Network(id=135205)],
                 location=Location(id=2)
             )
+            logging.info("Created server on hcloud")
+            create_response.wait_until_finished(max_retries=80)
             if u.snapshot_id is not None:
-                delete_snapshot_response = client.images.delete(image=Image(id=u.snapshot_id))
-                delete_snapshot_response.action.wait_until_finished(max_retries=80)
+                client.images.delete(image=Image(id=u.snapshot_id))
+                time.sleep(30)  # hcloud api client.images.delete() returns Bool instead of Action, cant use response.wait_until_finished()
                 u.snapshot_id = None
+                logging.info("Cleared old snapshot")
             u.server_id = create_response.server.id
             u.creation_date = int(datetime.now().timestamp())  # TODO: finish creation date usage
-#            u.server_create(u.server_ip, u.server_id, u.creation_date, u.id)
             u.server_create()
+            logging.info("Transaction to database complete")
             context.bot.edit_message_text(chat_id=u.id, message_id=msg.message_id, text=t.creation_complete)
             logging.info(f'⬆️ {u.name}({u.id}) created server on {u.server_ip}')
         else:
