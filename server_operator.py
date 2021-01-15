@@ -127,7 +127,7 @@ def open_server(update, context):
                 location=Location(id=2)
             )
             logging.info("Created server on hcloud")
-            create_response.wait_until_finished(max_retries=80)
+            create_response.action.wait_until_finished(max_retries=80)
             if u.snapshot_id is not None:
                 client.images.delete(image=Image(id=u.snapshot_id))
                 time.sleep(30)  # hcloud api client.images.delete() returns Bool instead of Action, cant use response.wait_until_finished()
