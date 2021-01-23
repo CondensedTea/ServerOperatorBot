@@ -19,11 +19,12 @@ sqlite_connector.config(filename=os.environ["SQLITE_DB"], lowest_ip=7)
 @app.route('/get_name')
 def get_name():
     u = Database(server_ip=request.remote_addr)
-    if not u:
-        logging.warning("Received call for /get_name from unknown ip, {}".format(request.remote_addr))
+    (name,) = u.get_name()
+    if name is None:
+        logging.warning("Received call for /get_name from unknown ip, {} with type {}".format(request.remote_addr, type(request.remote_addr)))
+        return "ERROR"
     else:
         logging.info("/get_name was successfully called from {}".format(request.remote_addr))
-        (name,) = u.get_name()
         return name
 
 
