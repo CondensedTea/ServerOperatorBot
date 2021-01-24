@@ -51,6 +51,7 @@ def start(update, context):
         if u.token:
             u.id = update.message.from_user.id
             u.user_create(name)
+            u.server_create()
             u.invite_create(join_token)
             user_filter.add_user_ids(u.id)
             context.bot.send_message(chat_id=u.id, text=Text.welcome)
@@ -135,7 +136,7 @@ def open_server(update, context):
                 logging.info("Cleared old snapshot")
             u.server_id = create_response.server.id
             u.creation_date = int(datetime.now().timestamp())  # TODO: finish creation date usage
-            u.server_create()
+            u.server_update()
             logging.info("Transaction to database complete")
             context.bot.edit_message_text(chat_id=u.id, message_id=msg.message_id, text=t.creation_complete)
             logging.info(f'⬆️ {u.name}({u.id}) created server on {u.server_ip}')

@@ -1,11 +1,18 @@
 ## Server Operator Bot
 
-This bot allows to operate homebrew VDI based on Hetzner Cloud servers.
+This bot operates self-hosted VDI based on Hetzner Cloud API and integrates with Samba Active Directory.
 
-It is based on `hcloud-python` and `python-telegram-bot` libs.
+It is based on `hcloud-python` and `python-telegram-bot` libs and needs `python3-samba`, `python-systemd` packages, all data is stored in SQLite database.
 
-Data is stored in json files which can be specified in #config section.
+Requires environment variables:
 
-Bot replies stored in Text class and can be modified. 
+| Variable  | Value |
+| ------------- | ------------- |
+| TOKEN_HCLOUD  | hcloud API token  |
+| TOKEN_SO  | telegram API token  |
+| ROBOT  | password for Samba AD OU admin  |
+| LOGFILE  | path to log file  |
+| SQLITE_DB  | path to database file |
+| TOKEN_SO  | telegram API token  |
 
-As for now bot must be ran on Samba DC in order to correctly cleanup machines from AD.
+Tested on Debian 10/11
