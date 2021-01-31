@@ -25,7 +25,6 @@ default_image = 28353196
 admin_password = os.environ["ROBOT"]
 token_h = os.environ["TOKEN_HCLOUD"]
 token_tg = os.environ["TOKEN_SO"]
-ad = ActiveDirectory("robot", admin_password, "192.168.89.4", "hq.rtdprk.ru")
 support_email = "a.b.tyshkevich@rtdprk.ru"
 t = Text
 
@@ -39,10 +38,10 @@ user_filter = Filters.user()
 
 def start(update, context):
     """
-    Starting command for bot. With /start link, allows to register in database with token.
-    :param update: bots updater
-    :param context: context of the bot
-    :return: nothing
+    Starting command for bot. With join link given, registers in database.
+    :param update:
+    :param context:
+    :return:
     """
     u = Database(update.message.from_user.id)
     join_token = extract_join_token(context.args)
@@ -66,7 +65,7 @@ def start(update, context):
 
 def gen_link(update, context):
     """
-    Bot command for creating invitation for user. Can be called only from admin in admin_list
+    Creates join link for new user, can be called by admin
     :param update:
     :param context:
     :return:
@@ -83,7 +82,7 @@ def gen_link(update, context):
 
 def list_users(update, context):
     """
-    List of users in Users table, only for admins in admin_list
+    Lists users from Users table, can be called by admins
     :param update:
     :param context:
     :return:
@@ -98,12 +97,14 @@ def list_users(update, context):
 
 def open_server(update, context):
     """
-    Bot command for creation server from default snapshot or snapshot of previous session. Can be called from admin for other user.
+    Bot command for creation server from default snapshot or snapshot of previous session.
+    Can be called as admin for other user.
     :param update:
     :param context:
     :return:
     """
     u = Database(update.effective_chat.id)
+    ad = ActiveDirectory("robot", admin_password, "192.168.89.4", "hq.rtdprk.ru")
     if len(context.args) == 1 and u.is_admin:
         u = Database(context.args[0])
     if not u.snapshot_id:
@@ -156,6 +157,7 @@ def close_server(update, context):
     :return:
     """
     u = Database(update.message.from_user.id)
+    ad = ActiveDirectory("robot", admin_password, "192.168.89.4", "hq.rtdprk.ru")
     if len(context.args) == 1 and u.is_admin:
         u = Database(context.args[0])
     try:
@@ -191,12 +193,13 @@ def close_server(update, context):
 
 def clear(update, context):
     """
-    Bot command for clearing users server and samba computer instance. Takes as argument telegram id of user
+    Bot command for clearing users server and samba computer instance. Takes as argument telegram id of user.
     :param update:
-    :param context:
+    :param context: Telegram id of user
     :return:
     """
     u = Database(context.args[0])
+    ad = ActiveDirectory("robot", admin_password, "192.168.89.4", "hq.rtdprk.ru")
     try:
         response_shutdown = client.servers.shutdown(server=Server(id=u.server_id))
         response_shutdown.wait_until_finished(max_retries=80)
@@ -221,9 +224,9 @@ def clear(update, context):
 
 def gen_join_token(user):
     """
-    Generates random string of letters and numbers with length 24 and username in the end
+    Generates auth token for user with length of 24 and username
     :param user: username
-    :return: random string plus username
+    :return: auth token
     """
     letters = string.ascii_letters + string.digits
     return ''.join(random.choice(letters) for i in range(24)) + "--" + user
@@ -231,7 +234,7 @@ def gen_join_token(user):
 
 def extract_join_token(args):
     """
-    Returns first item of list with length 1, else returns None
+    Extracts auth token from list
     :param args: list of arguments
     :return: first item in list or None
     """
